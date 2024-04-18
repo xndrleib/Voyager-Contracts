@@ -499,8 +499,12 @@ class MultiAgentVoyager:
             # collect all chat events for each agent
             chat_events = {agent.username: [] for agent in self.agents}
             other_events = {agent.username: [] for agent in self.agents}
-            for agent, other_agent in [self.agents, self.agents[::-1]]: # wont work if num_agents != 2
-                for (event_type, event) in events[agent.username]['events']:
+            for agent, other_agent in [self.agents, self.agents[::-1]]:  # wont work if num_agents != 2
+                agent_events = events_ar.get(agent.username, {}).get('events', [])
+                if not agent_events:
+                    print('fix_chat_events function: Agent events is empty')
+
+                for (event_type, event) in agent_events:
                     if event_type == 'onChat':
                         chat_events[agent.username].append((event_type, event))
                     # record both agents observations for reading inventory etc

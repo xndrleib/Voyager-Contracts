@@ -14,43 +14,44 @@ from .agents import CurriculumAgent
 from .agents import SkillManager
 from .agents import JudgeAgent
 
+
 # TODO: remove event memory
 class Voyager:
     def __init__(
-        self,
-        mc_port: int = None,
-        username: str = "bot",
-        azure_login: Dict[str, str] = None,
-        server_port: int = 3000,
-        openai_api_key: str = None,
-        env_wait_ticks: int = 20,
-        env_request_timeout: int = 600,
-        max_iterations: int = 160,
-        reset_placed_if_failed: bool = False,
-        action_agent_model_name: str = "gpt-4",
-        action_agent_temperature: float = 0,
-        action_agent_task_max_retries: int = 4,
-        action_agent_show_chat_log: bool = True,
-        action_agent_show_execution_error: bool = True,
-        curriculum_agent_model_name: str = "gpt-4",
-        curriculum_agent_temperature: float = 0,
-        curriculum_agent_qa_model_name: str = "gpt-3.5-turbo",
-        curriculum_agent_qa_temperature: float = 0,
-        curriculum_agent_warm_up: Dict[str, int] = None,
-        curriculum_agent_core_inventory_items: str = r".*_log|.*_planks|stick|crafting_table|furnace"
-        r"|cobblestone|dirt|coal|.*_pickaxe|.*_sword|.*_axe",
-        curriculum_agent_mode: str = "auto",
-        critic_agent_model_name: str = "gpt-4",
-        critic_agent_temperature: float = 0,
-        critic_agent_mode: str = "auto",
-        skill_manager_model_name: str = "gpt-3.5-turbo",
-        skill_manager_temperature: float = 0,
-        skill_manager_retrieval_top_k: int = 5,
-        openai_api_request_timeout: int = 240,
-        episode_timeout: int = 120,
-        ckpt_dir: str = "ckpt",
-        skill_library_dir: str = None,
-        resume: bool = False,
+            self,
+            mc_port: int = None,
+            username: str = "bot",
+            azure_login: Dict[str, str] = None,
+            server_port: int = 3000,
+            openai_api_key: str = None,
+            env_wait_ticks: int = 20,
+            env_request_timeout: int = 600,
+            max_iterations: int = 160,
+            reset_placed_if_failed: bool = False,
+            action_agent_model_name: str = "gpt-4",
+            action_agent_temperature: float = 0,
+            action_agent_task_max_retries: int = 4,
+            action_agent_show_chat_log: bool = True,
+            action_agent_show_execution_error: bool = True,
+            curriculum_agent_model_name: str = "gpt-4",
+            curriculum_agent_temperature: float = 0,
+            curriculum_agent_qa_model_name: str = "gpt-3.5-turbo",
+            curriculum_agent_qa_temperature: float = 0,
+            curriculum_agent_warm_up: Dict[str, int] = None,
+            curriculum_agent_core_inventory_items: str = r".*_log|.*_planks|stick|crafting_table|furnace"
+                                                         r"|cobblestone|dirt|coal|.*_pickaxe|.*_sword|.*_axe",
+            curriculum_agent_mode: str = "auto",
+            critic_agent_model_name: str = "gpt-4",
+            critic_agent_temperature: float = 0,
+            critic_agent_mode: str = "auto",
+            skill_manager_model_name: str = "gpt-3.5-turbo",
+            skill_manager_temperature: float = 0,
+            skill_manager_retrieval_top_k: int = 5,
+            openai_api_request_timeout: int = 240,
+            episode_timeout: int = 120,
+            ckpt_dir: str = "ckpt",
+            skill_library_dir: str = None,
+            resume: bool = False,
     ):
         """
         The main class for Voyager.
@@ -202,7 +203,7 @@ class Voyager:
             logger = logging.getLogger(self.username)
             logger.setLevel(logging.INFO)
             logger.addHandler(handler)
-            
+
             return logger.info
 
         return print
@@ -220,7 +221,7 @@ class Voyager:
                     "wait_ticks": self.env_wait_ticks,
                 }
             )
-        # difficulty = (
+            # difficulty = (
             "easy" if len(self.curriculum_agent.completed_tasks) > 15 else "peaceful"
         # )
         # step to peek an observation
@@ -235,7 +236,8 @@ class Voyager:
         )
         system_message = self.action_agent.render_system_message(skills=skills)
         human_message = self.action_agent.render_human_message(
-            events=events, code="", task=self.task, contract=self.contract, scenario=self.scenario, context=context, critique=""
+            events=events, code="", task=self.task, contract=self.contract, scenario=self.scenario, context=context,
+            critique=""
         )
         self.messages = [system_message, human_message]
         self.logger(
@@ -271,7 +273,7 @@ class Voyager:
             self.action_agent.update_chest_memory(events[-1][1]["nearbyChests"])
             success, critique = self.critic_agent.check_task_success(
                 events=events,
-                task=self.task, # could add in contract here so that critic checks contract following
+                task=self.task,  # could add in contract here so that critic checks contract following
                 context=self.context,
                 chest_observation=self.action_agent.render_chest_observation(),
                 max_retries=5,
@@ -295,8 +297,8 @@ class Voyager:
                 events[-1][1]["voxels"] = new_events[-1][1]["voxels"]
             new_skills = self.skill_manager.retrieve_skills(
                 query=self.context
-                + "\n\n"
-                + self.action_agent.summarize_chatlog(events)
+                      + "\n\n"
+                      + self.action_agent.summarize_chatlog(events)
             )
             system_message = self.action_agent.render_system_message(skills=new_skills)
             human_message = self.action_agent.render_human_message(
@@ -316,8 +318,8 @@ class Voyager:
         assert len(self.messages) == 2
         self.action_agent_rollout_num_iter += 1
         done = (
-            self.action_agent_rollout_num_iter >= self.action_agent_task_max_retries
-            or success
+                self.action_agent_rollout_num_iter >= self.action_agent_task_max_retries
+                or success
         )
         info = {
             "task": self.task,
@@ -326,7 +328,7 @@ class Voyager:
         }
         if success:
             assert (
-                "program_code" in parsed_result and "program_name" in parsed_result
+                    "program_code" in parsed_result and "program_name" in parsed_result
             ), "program and program_name must be returned when success"
             info["program_code"] = parsed_result["program_code"]
             info["program_name"] = parsed_result["program_name"]

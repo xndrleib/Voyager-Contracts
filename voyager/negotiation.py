@@ -3,6 +3,7 @@ import logging
 from api_keys import openai_api_key
 from voyager.prompts import load_prompt
 
+
 class Negotiator:
     def __init__(self, name, task, other_name, other_task, scenario, model="gpt-3.5-turbo", temperature=0.1):
         self.name = name
@@ -20,29 +21,29 @@ class Negotiator:
         self.system_prompt = f"Your name is {name}\n\nYour Task: {task}\n\nOther Agent's Name: {other_name}\n\nOther Agent's Task: {other_task}\n\nScenario: {scenario}\n\n{system_prompt}"
 
         self.reset()
-        
 
     def reset(self):
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
     def generate_message(self, content=None):
-        if content: 
+        if content:
             self.messages.append({"role": "user", "content": content})
-        
+
         response = openai.ChatCompletion.create(
             model=self.model,
             messages=self.messages,
             temperature=self.temperature,
         )
-        
+
         # Parsing the response based on the new structure
         split_response = response['choices'][0]['message']['content'].split('[message]')
         inner_thought = split_response[0].replace('[thinking]', '').strip()
         message = split_response[1].strip() if len(split_response) > 1 else ""
-        
+
         self.messages.append({"role": "assistant", "content": response['choices'][0]['message']['content']})
-        
+
         return inner_thought, message
+
 
 class Negotiation:
     def __init__(self, agent1, agent2, max_turns=6, save_dir='logs'):
@@ -52,7 +53,7 @@ class Negotiation:
         self.save_dir = save_dir
         self.reset()
         self.logger = self.setup_custom_logger()
-                            
+
     def reset(self):
         self.conversation_log = []
         self.contract = None
@@ -72,12 +73,13 @@ class Negotiation:
         logger = logging.getLogger('negotiation')
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
-        
+
         def log_and_print(message, print_flag=True):
             logger.info(message)
             if print_flag: print(message)
+
         return log_and_print
-    
+
     def summarize(self):
         # Prepare a prompt for the summarization
         summary_prompt = "Summarize the following negotiation: \n\n"
@@ -104,20 +106,21 @@ class Negotiation:
             GREEN = '\033[92m'
             DARK_GREEN = '\033[32m'
             RESET = '\033[0m'
-        
+
         name, thought, message = log
 
         # agent1 is blue and agent2 is green
         if name == self.agent1.name:
-            self.logger(f"{Color.LIGHT_BLUE}{name} (Thought): {thought}{Color.RESET}",  print_flag=print_flag)
-            self.logger(f"{Color.BLUE}{name} (Message): {message}{Color.RESET}\n",  print_flag=print_flag)
+            self.logger(f"{Color.LIGHT_BLUE}{name} (Thought): {thought}{Color.RESET}", print_flag=print_flag)
+            self.logger(f"{Color.BLUE}{name} (Message): {message}{Color.RESET}\n", print_flag=print_flag)
         else:
             self.logger(f"{Color.LIGHT_GREEN}{name} (Thought): {thought}{Color.RESET}", print_flag=print_flag)
             self.logger(f"{Color.DARK_GREEN}{name} (Message): {message}{Color.RESET}\n", print_flag=print_flag)
 
     def simulate(self):
         if len(self.conversation_log) > 0:
-            raise Exception("Conversation has already been simulated. Use display() to see the conversation. Or use reset() to start a new conversation.")
+            raise Exception(
+                "Conversation has already been simulated. Use display() to see the conversation. Or use reset() to start a new conversation.")
 
         accept = False
         for turn in range(self.max_turns):
@@ -133,7 +136,7 @@ class Negotiation:
 
             # Live display of conversation based on the flag
             self._display_message(self.conversation_log[-1])
-            
+
             # if a player accepts the contract, end the conversation
             if '[accept]' in message:
                 accept = True

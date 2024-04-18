@@ -4,34 +4,34 @@ import time
 from api_keys import openai_api_key
 
 # Argument parser
-parser = argparse.ArgumentParser(description='Running Voyager with different sets of parameters.')
-parser.add_argument('--port', type=int, default=49172, help='MC port number (default: 49172)')
+# parser = argparse.ArgumentParser(description='Running Voyager with different sets of parameters.')
+# parser.add_argument('--port', type=int, default=49172, help='MC port number (default: 49172)')
 # parser.add_argument('--server_port', type=int, default=3000, help='Server port number (default: 3000)')
-args = parser.parse_args()
+# args = parser.parse_args()
 
 # You can also use mc_port instead of azure_login, but azure_login is highly recommended
 azure_login = {
-    "client_id": "d0f74e80-fffc-4ace-8361-7e4f0b21fc5c",
+    "client_id": "268d760d-09de-46e8-a10b-3532c05aa8f3",
     "redirect_url": "https://127.0.0.1/auth-response",
-    "secret_value": "[OPTIONAL] YOUR_SECRET_VALUE",
-    "version": "fabric-loader-0.14.18-1.20.1", # the version Voyager is tested on
+    "secret_value": "",
+    "version": "fabric-loader-0.14.18-1.19",  # the version Voyager is tested on
 }
 
-mc_port = args.port
+# mc_port = args.port
 options = {
-    'azure_login':  None,
-    'mc_port': mc_port,
+    'azure_login': azure_login,
+    # 'mc_port': mc_port,
     'openai_api_key': openai_api_key,
     # skill_library_dir=skill_library_dir, # Load a learned skill library.
     # ckpt_dir: ckpt_dir, # Feel free to use a new dir. Do not use the same dir as skill library because new events will still be recorded to ckpt_dir. 
-    'resume':False, # Do not resume from a skill library because this is not learning.
-    'env_wait_ticks':80,
+    'resume': False,  # Do not resume from a skill library because this is not learning.
+    'env_wait_ticks': 80,
     # 'env_request_timeout': 600,
-    'action_agent_task_max_retries':50,
-    'action_agent_show_chat_log':True,
-    'action_agent_temperature':0.3,
-    'action_agent_model_name': "gpt-4-0613", # #"gpt-4-0613",
-    'critic_agent_model_name': "gpt-4-0613", #"gpt-3.5-turbo", #"gpt-4-0613",
+    'action_agent_task_max_retries': 50,
+    'action_agent_show_chat_log': True,
+    'action_agent_temperature': 0.3,
+    'action_agent_model_name': "gpt-3.5-turbo",  # #"gpt-4-0613",
+    'critic_agent_model_name': "gpt-3.5-turbo",  # "gpt-3.5-turbo", #"gpt-4-0613",
 }
 
 contract = """
@@ -54,16 +54,16 @@ contract = """
 # """.strip()
 
 multi_agent = MultiAgentVoyager(
-    num_agents=2, 
-    scenario_file="cleanup.json", 
+    num_agents=2,
+    scenario_file="cleanup.json",
     critic_mode="auto",
     contract_mode="manual",
     contract=contract,
     # save_dir="saves/cleanup_swap_transfer",
     continuous=True,
-    episode_timeout=120, #120,
+    episode_timeout=120,  # 120,
     num_episodes=1,
-    negotiator_model_name="gpt-4-0613",
+    negotiator_model_name="gpt-3.5-turbo",
     negotiator_temperature=0.7,
     options=options
 )

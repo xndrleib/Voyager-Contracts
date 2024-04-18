@@ -7,30 +7,35 @@ import copy
 from datetime import datetime
 import requests
 
-class MultiAgentVoyager:
-    
-    def __init__(self, 
-        num_agents=2, 
-        server_port=3003,
-        usernames=["Gizmo", "Glitch"],  
-        judge_username="Judy",
-        scenario_file=None,
-        save_dir=None, 
-        critic_mode="auto", 
-        contract_mode="auto",
-        contract=None,
-        continuous=True,
-        episode_timeout=120, 
-        num_episodes=3,
-        negotiator_model_name="gpt-4",
-        negotiator_temperature=0.7,
-        skinurls = [
-            "https://images2.imgbox.com/60/3d/2bJnlM8U_o.png", # player 1 skin
-            "https://images2.imgbox.com/a7/6c/hZRGGRAS_o.png" # player 2 skin
-        ],
-        options={}
-    ):
 
+class MultiAgentVoyager:
+
+    def __init__(self,
+                 num_agents=2,
+                 server_port=3000,
+                 usernames=["Gizmo", "Glitch"],
+                 judge_username="Judy",
+                 scenario_file=None,
+                 save_dir=None,
+                 critic_mode="auto",
+                 contract_mode="auto",
+                 contract=None,
+                 continuous=True,
+                 episode_timeout=120,
+                 num_episodes=3,
+                 negotiator_model_name="gpt-4",
+                 negotiator_temperature=0.7,
+                 skinurls=None,
+                 options=None
+                 ):
+
+        if skinurls is None:
+            skinurls = [
+                "https://images2.imgbox.com/60/3d/2bJnlM8U_o.png",  # player 1 skin
+                "https://images2.imgbox.com/a7/6c/hZRGGRAS_o.png"  # player 2 skin
+            ]
+        if options is None:
+            options = {}
         self.scenario_file = scenario_file
         self.scenario_description = None
         self.scenario_code = None
@@ -61,11 +66,11 @@ class MultiAgentVoyager:
                 raise ValueError("Contract mode is manual but no contract was provided")
             if not isinstance(contract, str):
                 raise ValueError("Contract must be a string")
-            self.contract = contract        
+            self.contract = contract
 
         if num_agents != 2:
             raise ValueError("Only 2 agents are supported at this time")
-        
+
         # load game save directory if it exists
         if save_dir is not None and U.f_not_empty(save_dir):
             print("Provided save directory exists. Loading game...")
@@ -74,14 +79,15 @@ class MultiAgentVoyager:
             # recover contract
             try:
                 with open(f"{self.save_dir}/contract.txt", 'r') as contract_file:
-                        self.contract = contract_file.read()
+                    self.contract = contract_file.read()
                 if contract_mode == "auto":
-                    print("Warning: contract mode is auto but contract was found in save directory. Overwriting with saved contract...")
+                    print(
+                        "Warning: contract mode is auto but contract was found in save directory. Overwriting with saved contract...")
             except FileNotFoundError:
-                raise("No contract found in save directory")
-            
+                raise ("No contract found in save directory")
+
             self.load_from_save = True
-        
+
         # create new game save directory
         else:
             if save_dir is None:
@@ -103,12 +109,12 @@ class MultiAgentVoyager:
 
         # create agents
         for i in range(num_agents):
-            username=self.usernames[i]
-            ckpt_dir=f"{self.save_dir}/{username}_ckpt"
+            username = self.usernames[i]
+            ckpt_dir = f"{self.save_dir}/{username}_ckpt"
 
             agent = Voyager(
                 username=username,
-                server_port=str(server_port+1+i),
+                server_port=server_port + 1 + i,
                 ckpt_dir=ckpt_dir,
                 episode_timeout=episode_timeout,
                 **options
@@ -126,7 +132,8 @@ class MultiAgentVoyager:
 
     def run_threads(self, target, args=None, include_judge=False, shared_args=False):
         """
-        Runs target function in parallel for each agent. args is a dictionary of arguments to pass to each thread, where the key is the agent's username.
+        Runs target function in parallel for each agent. args is a dictionary of arguments to pass to each thread,
+        where the key is the agent's username.
 
         For example,
         args = {'Voyager3000': {'arg1': 1, 'arg2': 2}, 'Voyager3001': {'arg1': 3, 'arg2': 4}}
@@ -146,9 +153,10 @@ class MultiAgentVoyager:
         for thread in threads:
             thread.join()
         return results
-    
+
     def reset_agents(self, mode='soft', timeout=10):
-        args = {agent.username: {'options': {'mode': mode, 'wait_ticks': agent.env_wait_ticks}} for agent in self.agents}
+        args = {agent.username: {'options': {'mode': mode, 'wait_ticks': agent.env_wait_ticks}} for agent in
+                self.agents}
         self.run_threads(lambda agent, _, options: agent.env.reset(options=options), args=args)
         time.sleep(2)
 
@@ -162,7 +170,7 @@ class MultiAgentVoyager:
         print('Saving scenario...')
 
         if len(self.agents) == 0:
-            raise('At least one agent must be initialized to save scenario')
+            raise 'At least one agent must be initialized to save scenario'
 
         scenario_block_types = save_options['scenario_block_types']
         file_name = save_options['file_name']
@@ -203,12 +211,13 @@ class MultiAgentVoyager:
         #             "wait_ticks": self.judge.env_wait_ticks,
         #         }
         #     )
-        
+
         x, y, z = center_position['x'], center_position['y'], center_position['z']
 
         # Remove blocks of type scenario_block_types so they don't interfere with the scenario
         if remove_blocks:
-            input(f"Center position is set to {center_position}. Blocks of type {scenario_block_types} will be deleted nearby. Press enter to continue...")
+            input(
+                f"Center position is set to {center_position}. Blocks of type {scenario_block_types} will be deleted nearby. Press enter to continue...")
             print("Removing blocks...\n")
             self.judge.env.step(
                 f"await bot.chat('/tp {x} {y} {z}');"
@@ -221,7 +230,8 @@ class MultiAgentVoyager:
         print("Saving blocks...\n")
         events = self.judge.env.step(
             f"bot.chat('/tp {x} {y} {z}');"
-            + f"await getBlockPositions(bot, {U.json_dumps(scenario_block_types)}, {U.json_dumps(center_position)})", # should be able to specify center square of save area
+            + f"await getBlockPositions(bot, {U.json_dumps(scenario_block_types)}, {U.json_dumps(center_position)})",
+            # should be able to specify center square of save area
             programs=self.judge.skill_manager.programs,
         )
 
@@ -234,9 +244,10 @@ class MultiAgentVoyager:
             'tasks': {self.usernames[0]: 'mine diamond', self.usernames[1]: 'mine iron'},
             'center_position': center_position,
             'block_positions': {'facing': 'north', **block_positions},
-            'spawn_locations': {self.usernames[0]: {'x':x+1, 'y': y, 'z': z+1}, self.usernames[1]: {'x':x-1, 'y': y, 'z': z-1}},
+            'spawn_locations': {self.usernames[0]: {'x': x + 1, 'y': y, 'z': z + 1},
+                                self.usernames[1]: {'x': x - 1, 'y': y, 'z': z - 1}},
             'reward_item_name': ['diamond'],
-            'chest_contents': {'diamond_pickaxe':1},
+            'chest_contents': {'diamond_pickaxe': 1},
         }
         U.custom_dump(json_contents, file_name)
         print('Scenario saved in ', file_name)
@@ -247,11 +258,11 @@ class MultiAgentVoyager:
         # set file_name
         file_name = "scenarios/" + self.scenario_file
 
-        try: 
+        try:
             json_contents = U.json_load(file_name)
             print(f'Loading {self.scenario_file}...')
         except FileNotFoundError:
-            raise('No scenario file found')
+            raise ('No scenario file found')
 
         self.scenario_description = json_contents['description']
         tasks = json_contents['tasks']
@@ -279,7 +290,7 @@ class MultiAgentVoyager:
 
         # clear inventory for both agents
         if len(self.agents) == 0:
-            raise('At least one agent must be initialized to load scenario')
+            raise ('At least one agent must be initialized to load scenario')
         self.reset_agents(mode='hard')
 
         x, y, z = center_position['x'], center_position['y'], center_position['z']
@@ -287,7 +298,7 @@ class MultiAgentVoyager:
         # spawn bots, replace blocks, and fill chest
         self.judge.env.step(
             f"bot.chat('/gamemode spectator {self.judge_username}');"
-            + f"bot.chat('/tp {self.judge_username} {x} {y+20} {z}');" # move this into a helper?
+            + f"bot.chat('/tp {self.judge_username} {x} {y + 20} {z}');"  # move this into a helper?
             + f"bot.chat('/gamerule randomTickSpeed 3');"
             + f"bot.chat('/gamerule spawnRadius 0');"
             + U.remove_drops_commands()
@@ -324,7 +335,7 @@ class MultiAgentVoyager:
             agent.action_agent.chest_memory = self.chest_memory
 
     def check_task_success(self, events, max_retries=5):
-        
+
         def ai_check_task_success(agent, result, events):
             if agent.username == self.judge_username:
                 critic_agent = agent.judge_agent
@@ -355,7 +366,7 @@ class MultiAgentVoyager:
                 emeralds = None
 
             result.update({'success': success, 'critique': critique, 'emeralds': emeralds})
-        
+
         # TODO: include judge human feedback
         def human_check_task_success():
             results = {agent.username: {} for agent in self.agents}
@@ -385,27 +396,27 @@ class MultiAgentVoyager:
 
         if self.critic_mode == "manual":
             return human_check_task_success()
-        
+
         return self.run_threads(ai_check_task_success, events, include_judge=True)
-        
+
     def save_episode(self, results):
         U.dump_json(results, f"{self.save_dir}/episodes/episode{self.episode}/code.json")
 
-    def load_episode(self, episode): 
+    def load_episode(self, episode):
         if not isinstance(episode, int):
             raise ValueError("episode must be an integer")
-        
+
         file_name = f"{self.save_dir}/episodes/episode{episode}/code.json"
         json_contents = U.json_load(file_name)
         return json_contents
-    
+
     # def replay_episode(self, episode):
     #     if not isinstance(episode, int):
     #         raise ValueError("episode must be an integer")
 
     #     episode_results = self.load_episode(episode)
     #     self.run_threads(env_step, args=episode_results)
-    
+
     def run_episode(self, episode=None, reload=True, reset='soft'):
         # get ai_message and parse
         def get_ai_message_parse(agent, result):
@@ -424,7 +435,7 @@ class MultiAgentVoyager:
             if not isinstance(parsed_result, dict):
                 assert isinstance(parsed_result, str)
                 print('parsed_result', parsed_result)
-                agent.recorder.record([], agent.task) 
+                agent.recorder.record([], agent.task)
                 agent.logger(f"\033[34m{parsed_result} Trying again!\033[0m")
 
             code = parsed_result["program_code"] + "\n" + parsed_result["exec_code"]
@@ -433,7 +444,7 @@ class MultiAgentVoyager:
                 + code,
                 programs=agent.skill_manager.programs,
             )
-            agent.recorder.record(events, agent.task) # what is this for??
+            agent.recorder.record(events, agent.task)  # what is this for??
             self.update_chest_memory(events[-1][1]["nearbyChests"])
             result.update({'events': events})
 
@@ -441,8 +452,8 @@ class MultiAgentVoyager:
         def update_agent(agent, result, parsed_result, events, success, critique, contract_critique, emeralds):
             new_skills = agent.skill_manager.retrieve_skills(
                 query=agent.context
-                + "\n\n"
-                + agent.action_agent.summarize_chatlog(events)
+                      + "\n\n"
+                      + agent.action_agent.summarize_chatlog(events)
             )
             system_message = agent.action_agent.render_system_message(skills=new_skills)
             human_message = agent.action_agent.render_human_message(
@@ -461,8 +472,8 @@ class MultiAgentVoyager:
             agent.action_agent_rollout_num_iter += 1
 
             done = (
-                agent.action_agent_rollout_num_iter >= agent.action_agent_task_max_retries
-                or success
+                    agent.action_agent_rollout_num_iter >= agent.action_agent_task_max_retries
+                    or success
             )
             info = {
                 "task": agent.task,
@@ -472,11 +483,11 @@ class MultiAgentVoyager:
             }
             if success:
                 assert (
-                    "program_code" in parsed_result and "program_name" in parsed_result
+                        "program_code" in parsed_result and "program_name" in parsed_result
                 ), "program and program_name must be returned when success"
                 info["program_code"] = parsed_result["program_code"]
                 info["program_name"] = parsed_result["program_name"]
-            
+
             agent.logger(
                 f"\033[32m****Action Agent human message****\n{agent.messages[-1].content}\033[0m"
             )
@@ -484,7 +495,7 @@ class MultiAgentVoyager:
 
         # replace chat events with those from the agent who lived longest and save both players observations
         # note: this is a hacky solution to a problem that should be fixed in the future
-        def fix_chat_events(events):
+        def fix_chat_events(events_ar):
             # collect all chat events for each agent
             chat_events = {agent.username: [] for agent in self.agents}
             other_events = {agent.username: [] for agent in self.agents}
@@ -498,9 +509,10 @@ class MultiAgentVoyager:
                         other_events[agent.username].append((event_type, event))
                     else:
                         other_events[agent.username].append((event_type, event))
-            # copy in longest thread of chats
+            # copy in the longest thread of chats
             longest_thread = max(chat_events.values(), key=len)
-            new_events = {agent.username: {'events': longest_thread + other_events[agent.username]} for agent in self.agents}
+            new_events = {agent.username: {'events': longest_thread + other_events[agent.username]} for agent in
+                          self.agents}
 
             # copy one of the agents events for the judge
             new_events[self.judge_username] = new_events[self.agents[0].username]
@@ -511,18 +523,18 @@ class MultiAgentVoyager:
         if reload:
             self.load_scenario(reset=reset)
             # time.sleep(3) # wait for voyagers and scenario to load
-        
+
         # if a specific episode is provided, look for contract and play it
         # ideally this should be moved to a different function (except env_step should be moved too)
         if episode is not None:
             if not isinstance(episode, int):
                 raise ValueError("episode must be an integer")
-            
+
             episode_results = self.load_episode(episode)
             self.run_threads(env_step, args=episode_results)
             self.reset_agents()
             return
-        
+
         # get ai_message and parse in parallel
         print('get_ai_message_parse')
         parsed_results = self.run_threads(get_ai_message_parse)
@@ -546,13 +558,13 @@ class MultiAgentVoyager:
         results = self.run_threads(update_agent, args={
             agent.username: {
                 **parsed_results[agent.username],
-                **events[agent.username], 
+                **events[agent.username],
                 **critic_response[agent.username],
                 'contract_critique': critic_response[self.judge.username]['critique'][agent.username],
                 'emeralds': critic_response[self.judge.username]['emeralds'][agent.username],
 
             } for agent in self.agents}
-        )
+                                   )
 
         return results
 
@@ -561,10 +573,10 @@ class MultiAgentVoyager:
         Generates a contract for the agents to follow and sets self.contract to the contract.
         """
         print('Negotiating contract...')
-        
+
         if self.scenario_description is None:
             raise ValueError("Scenario must be loaded before negotiating contract")
-        
+
         agent1 = self.agents[0]
         agent2 = self.agents[1]
 
@@ -595,10 +607,11 @@ class MultiAgentVoyager:
     def run(self):
 
         if self.load_from_save:
-            input("Warning: loaded from saved directory. Continuing may overwrite saved files. Press enter to continue...")
+            input(
+                "Warning: loaded from saved directory. Continuing may overwrite saved files. Press enter to continue...")
 
         self.load_scenario(reset='hard')
-        
+
         # load the contract
         if self.contract_mode == "auto":
             if self.contract is not None:
@@ -615,7 +628,7 @@ class MultiAgentVoyager:
             'contract': self.contract,
             'scenario': self.scenario_description,
             'context': "",
-            'reset_env': False,}}, shared_args=True)
+            'reset_env': False, }}, shared_args=True)
 
         replay = False
         done = False
@@ -636,13 +649,14 @@ class MultiAgentVoyager:
 
                 # # stop episode from ending
                 # success = False
-                
+
                 # Print successes
                 for agent in self.agents:
                     print(f"{agent.username} {{emeralds: {results[agent.username]['info']['emeralds']}}}")
 
                 # save emerald values
-                U.json_dump({agent.username: results[agent.username]['info']['emeralds'] for agent in self.agents}, f"{self.save_dir}/episodes/episode{self.episode}/emeralds.json")
+                U.json_dump({agent.username: results[agent.username]['info']['emeralds'] for agent in self.agents},
+                            f"{self.save_dir}/episodes/episode{self.episode}/emeralds.json")
 
                 # if success:
                 #     user_response = input("Episode success. Press enter to close or 'r' to repeat...")
@@ -650,7 +664,7 @@ class MultiAgentVoyager:
                 #         replay = True
                 #     else: 
                 #         break
-            
+
             # if not continuous mode wait to continue
             if self.continuous:
                 self.episode += 1
@@ -663,24 +677,20 @@ class MultiAgentVoyager:
                     replay = True
                 else:
                     replay = False
-                    self.episode += 1 # only increment if not replaying
+                    self.episode += 1  # only increment if not replaying
 
-        print('Quitting...') 
-    
+        print('Quitting...')
+
     def close(self):
         server = self.judge.env.server
         res = requests.post(f"{server}/stop")
         for agent in self.agents + [self.judge]:
             agent.env.mineflayer.stop()
-        
+
         # killing voyagers
         # self.agents[0].close()
         # for agent in self.agents:
         #     agent.close()
-
-
-
-
 
     # def run_episode(self, tasks, contract="", context=""):
     #     results = []
@@ -711,7 +721,7 @@ class MultiAgentVoyager:
     #     #     )
 
     #     print('threads finished')
-            
+
     #     return results
 
     # def step(self, agent, result, task, contract, context):

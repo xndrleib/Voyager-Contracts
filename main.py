@@ -4,26 +4,20 @@ import time
 from api_keys import openai_api_key
 
 # Argument parser
-# parser = argparse.ArgumentParser(description='Running Voyager with different sets of parameters.')
-# parser.add_argument('--port', type=int, default=49172, help='MC port number (default: 49172)')
-# parser.add_argument('--server_port', type=int, default=3000, help='Server port number (default: 3000)')
-# args = parser.parse_args()
+parser = argparse.ArgumentParser(description='Running Voyager with different sets of parameters.')
+parser.add_argument('--port', type=int, required=True, help='MC port number')
+parser.add_argument('--server_port', type=int, default=3000, help='Server port number (default: 3000)')
+args = parser.parse_args()
 
-# You can also use mc_port instead of azure_login, but azure_login is highly recommended
-azure_login = {
-    "client_id": "268d760d-09de-46e8-a10b-3532c05aa8f3",
-    "redirect_url": "https://127.0.0.1/auth-response",
-    "secret_value": "",
-    "version": "fabric-loader-0.14.18-1.19",  # the version Voyager is tested on
-}
+azure_login = None
+mc_port = args.port
+server_port=args.server_port
 
-# mc_port = args.port
 options = {
     'azure_login': azure_login,
-    # 'mc_port': mc_port,
+    'mc_port': mc_port,
     'openai_api_key': openai_api_key,
     # skill_library_dir=skill_library_dir, # Load a learned skill library.
-    # ckpt_dir: ckpt_dir, # Feel free to use a new dir. Do not use the same dir as skill library because new events will still be recorded to ckpt_dir. 
     'resume': False,  # Do not resume from a skill library because this is not learning.
     'env_wait_ticks': 80,
     # 'env_request_timeout': 600,
@@ -54,6 +48,7 @@ contract = """
 # """.strip()
 
 multi_agent = MultiAgentVoyager(
+    server_port=server_port,
     num_agents=2,
     scenario_file="cleanup.json",
     critic_mode="auto",

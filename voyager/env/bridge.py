@@ -72,84 +72,79 @@ class VoyagerEnv(gym.Env):
             log_path=U.f_join(self.log_path, "minecraft"),
         )
 
-    def check_process(self):
-        if self.mc_instance and not self.mc_instance.is_running:
-            # if self.mc_instance:
-            #     self.mc_instance.check_process()
-            #     if not self.mc_instance.is_running:
-            print("Starting Minecraft server")
-            self.mc_instance.run()
-            self.mc_port = self.mc_instance.port
-            self.reset_options["port"] = self.mc_instance.port
-            print(f"Server started on port {self.reset_options['port']}")
-        retry = 0
-        while not self.mineflayer.is_running and retry <= 3:
-            retry += 1
+    def send_request(self, url, data, timeout=None):
+        try:
+            response = requests.post(url, json=data, timeout=timeout or self.request_timeout)
+            response.raise_for_status()  # Raises an HTTPError for bad responses
+            return response.json()
+        except requests.exceptions.HTTPError as errh:
+            print("HTTP Error:", errh)
+        except requests.exceptions.ConnectionError as errc:
+            print("Error Connecting:", errc)
+        except requests.exceptions.Timeout as errt:
+            print("Timeout Error:", errt)
+        except requests.exceptions.RequestException as err:
+            print("Oops: Something Else", err)
+        return None
+
+    def start_mc_instance(self):
+        print("Starting Minecraft server")
+        self.mc_instance.run()
+        self.mc_port = self.mc_instance.port
+        self.reset_options["port"] = self.mc_instance.port
+        print(f"Server started on port {self.reset_options['port']}")
+
+    def restart_mineflayer_with_backoff(self):
+        retry, max_retries, backoff_factor = 0, 3, 2
+        while retry <= max_retries:
             print("Mineflayer process has exited, restarting")
             self.mineflayer.run()
-            if not self.mineflayer.is_running:
-                continue
+            time.sleep(backoff_factor ** retry)
+            if self.mineflayer.is_running:
+                return
+            retry += 1
+        raise RuntimeError("Failed to restart Mineflayer after several attempts")
 
+    def try_server_start_endpoint(self):
         for retry in range(3):
-            # janky wait to make sure process has started
-            try:
-                res = requests.post(
-                    f"{self.server}/start",
-                    json=self.reset_options,
-                    timeout=10, #self.request_timeout,
-                )
-                if res.status_code != 200:
-                    self.mineflayer.stop()
-                    raise RuntimeError(
-                        f"Minecraft server reply with code {res.status_code}"
-                    )
-            except:
-                print('bot start failed, retrying...')
-                continue
-            print(self.mineflayer.ready_line)
-            return res.json()
+            result = self.send_request(f"{self.server}/start", self.reset_options, timeout=10)
+            if result is not None:
+                print("Server started successfully")
+                return result
+            print(f"Attempt {retry + 1}: bot start failed, retrying...")
+        raise RuntimeError("Failed to start server via /start endpoint")
 
-    def step(
-        self,
-        code: str,
-        programs: str = "",
-    ) -> Tuple[ObsType, SupportsFloat, bool, bool, Dict[str, Any]]:
+    def check_process(self):
+        if self.mc_instance and not self.mc_instance.is_running:
+            self.start_mc_instance()
+
+        if not self.mineflayer.is_running:
+            self.restart_mineflayer_with_backoff()
+
+        return self.try_server_start_endpoint()
+
+    def step(self, code: str, programs: str = ""):
         if not self.has_reset:
             raise RuntimeError("Environment has not been reset yet")
         self.check_process()
-        # self.unpause()
-        data = {
-            "code": code,
-            "programs": programs,
-        }
-        
-        res = requests.post(
-            f"{self.server}/step", json=data, timeout=self.request_timeout
-        )
-        if res.status_code != 200:
-            raise RuntimeError(
-                f"Minecraft server reply with code {res.status_code}"
-            )
-
-        returned_data = res.json()
-        # self.pause()
-        return json.loads(returned_data)
+        data = {"code": code, "programs": programs}
+        result = self.send_request(f"{self.server}/step", data)
+        if result is None:
+            raise RuntimeError("Failed to get a valid response from the Minecraft server")
+        return json.loads(result)
 
     def render(self):
         raise NotImplementedError("render is not implemented")
 
-    def reset(
-        self,
-        *,
-        seed=None,
-        options=None,
-    ) -> Tuple[ObsType, Dict[str, Any]]:
+    def reset(self, *, seed=None, options=None) -> Tuple[ObsType, Dict[str, Any]]:
         if options is None:
             options = {}
 
+        # Validate the options dictionary to ensure correct settings are applied
         if options.get("inventory", {}) and options.get("mode", "hard") != "hard":
-            raise RuntimeError("inventory can only be set when options is hard")
+            raise RuntimeError("Inventory can only be set when the reset mode is 'hard'.")
 
+        # Setting up reset options based on the provided arguments and defaults
         self.reset_options = {
             "port": self.mc_port,
             "username": self.username,
@@ -161,16 +156,21 @@ class VoyagerEnv(gym.Env):
             "position": options.get("position", None),
         }
 
-        # self.unpause()
+        # Ensure mineflayer is properly shutdown before attempting a reset
         self.mineflayer.stop()
-        time.sleep(1)  # wait for mineflayer to exit
+        time.sleep(1)  # Ensures the process has time to terminate properly
 
+        # Re-initialize or check server/mineflayer process status
         returned_data = self.check_process()
+        if returned_data is None:
+            raise RuntimeError("Failed to start or reset the server process properly.")
+
         self.has_reset = True
         self.connected = True
-        # All the reset in step will be soft
+
+        # All future resets after the initial setup will be of type 'soft'
         self.reset_options["reset"] = "soft"
-        # self.pause()
+
         return json.loads(returned_data)
 
     def close(self):

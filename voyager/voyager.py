@@ -1,18 +1,16 @@
 import copy
-import json
+import logging
 import os
 import time
 from typing import Dict
-import logging
 
 import voyager.utils as U
-from .env import VoyagerEnv
-
 from .agents import ActionAgent
 from .agents import CriticAgent
 from .agents import CurriculumAgent
-from .agents import SkillManager
 from .agents import JudgeAgent
+from .agents import SkillManager
+from .env import VoyagerEnv
 
 
 # TODO: remove event memory
@@ -222,7 +220,7 @@ class Voyager:
                 }
             )
             # difficulty = (
-            "easy" if len(self.curriculum_agent.completed_tasks) > 15 else "peaceful"
+            # "easy" if len(self.curriculum_agent.completed_tasks) > 15 else "peaceful"
         # )
         # step to peek an observation
         # events = self.env.step(

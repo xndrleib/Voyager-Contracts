@@ -1,11 +1,13 @@
+import copy
 import threading
+import time
+from datetime import datetime
+
+import requests
+
+import voyager.utils as U
 from voyager import Voyager
 from voyager.negotiation import Negotiation, Negotiator
-import time
-import voyager.utils as U
-import copy
-from datetime import datetime
-import requests
 
 
 class MultiAgentVoyager:
@@ -13,7 +15,7 @@ class MultiAgentVoyager:
     def __init__(self,
                  num_agents=2,
                  server_port=3000,
-                 usernames=["Gizmo", "Glitch"],
+                 usernames=("Gizmo", "Glitch"),
                  judge_username="Judy",
                  scenario_file=None,
                  save_dir=None,
@@ -81,10 +83,10 @@ class MultiAgentVoyager:
                 with open(f"{self.save_dir}/contract.txt", 'r') as contract_file:
                     self.contract = contract_file.read()
                 if contract_mode == "auto":
-                    print(
-                        "Warning: contract mode is auto but contract was found in save directory. Overwriting with saved contract...")
+                    print("Warning: contract mode is auto but contract was found in save directory. Overwriting with "
+                          "saved contract...")
             except FileNotFoundError:
-                raise ("No contract found in save directory")
+                raise "No contract found in save directory"
 
             self.load_from_save = True
 
@@ -121,13 +123,6 @@ class MultiAgentVoyager:
             )
             self.agents.append(agent)
 
-        # # set voyager skins
-        # for i, agent in enumerate(self.agents):
-        #     agent.env.reset()
-        #     agent.env.step(
-        #         U.skins_commands(self.skinurls[i])
-        # )
-
         # time.sleep(1)
 
     def run_threads(self, target, args=None, include_judge=False, shared_args=False):
@@ -139,8 +134,10 @@ class MultiAgentVoyager:
         args = {'Voyager3000': {'arg1': 1, 'arg2': 2}, 'Voyager3001': {'arg1': 3, 'arg2': 4}}
         """
         agents = self.agents + [self.judge] if include_judge else self.agents
-        if args is None: args = {agent.username: {} for agent in agents}
-        if shared_args: args = {agent.username: args for agent in agents}
+        if args is None:
+            args = {agent.username: {} for agent in agents}
+        if shared_args:
+            args = {agent.username: args for agent in agents}
 
         results = {}
         threads = []
@@ -182,11 +179,11 @@ class MultiAgentVoyager:
             print(f'Warning: scenario_file does not match file_name, using {file_name}')
         file_name = "scenarios/" + file_name
 
-        def extract_block_positions(events):
+        def extract_block_positions(events_ar):
             block_types = scenario_block_types
-            block_positions = {block: [] for block in block_types}
+            block_positions_ar = {block: [] for block in block_types}
 
-            for event in events:
+            for event in events_ar:
                 if event[0] == 'onChat':
                     message = event[1]['onChat']
                     # Checking each block type
@@ -199,11 +196,11 @@ class MultiAgentVoyager:
                                     continue
                                 x, y, z = map(int, pos.strip('()').split(', '))
                                 coord_dict = {'x': x, 'y': y, 'z': z}  # Convert coords to dictionary format
-                                block_positions[block].append(coord_dict)
+                                block_positions_ar[block].append(coord_dict)
 
             # Removing block types with no positions found
-            block_positions = {k: v for k, v in block_positions.items() if v}
-            return block_positions
+            block_positions_ar = {k: v for k, v in block_positions_ar.items() if v}
+            return block_positions_ar
 
         # self.judge.env.reset(
         #         options={
@@ -262,7 +259,7 @@ class MultiAgentVoyager:
             json_contents = U.json_load(file_name)
             print(f'Loading {self.scenario_file}...')
         except FileNotFoundError:
-            raise ('No scenario file found')
+            raise 'No scenario file found'
 
         self.scenario_description = json_contents['description']
         tasks = json_contents['tasks']
@@ -290,7 +287,7 @@ class MultiAgentVoyager:
 
         # clear inventory for both agents
         if len(self.agents) == 0:
-            raise ('At least one agent must be initialized to load scenario')
+            raise 'At least one agent must be initialized to load scenario'
         self.reset_agents(mode='hard')
 
         x, y, z = center_position['x'], center_position['y'], center_position['z']
@@ -336,14 +333,14 @@ class MultiAgentVoyager:
 
     def check_task_success(self, events, max_retries=5):
 
-        def ai_check_task_success(agent, result, events):
+        def ai_check_task_success(agent, result, events_ar):
             if agent.username == self.judge_username:
                 critic_agent = agent.judge_agent
             else:
                 critic_agent = agent.critic_agent
 
             human_message = critic_agent.render_human_message(
-                events=events,
+                events=events_ar,
                 task=agent.task,
                 scenario=self.scenario_description,
                 contract=self.contract,
@@ -397,7 +394,7 @@ class MultiAgentVoyager:
         if self.critic_mode == "manual":
             return human_check_task_success()
 
-        return self.run_threads(ai_check_task_success, events, include_judge=True)
+        return self.run_threads(ai_check_task_success, args={'events': events}, include_judge=True)
 
     def save_episode(self, results):
         U.dump_json(results, f"{self.save_dir}/episodes/episode{self.episode}/code.json")
@@ -422,6 +419,7 @@ class MultiAgentVoyager:
         def get_ai_message_parse(agent, result):
             if agent.action_agent_rollout_num_iter < 0:
                 raise ValueError("Agent must be reset before stepping")
+
             ai_message = agent.action_agent.llm(agent.messages)
             agent.logger(f"\033[34m****Action Agent ai message****\n{ai_message.content}\033[0m")
             agent.conversations.append(
@@ -439,25 +437,25 @@ class MultiAgentVoyager:
                 agent.logger(f"\033[34m{parsed_result} Trying again!\033[0m")
 
             code = parsed_result["program_code"] + "\n" + parsed_result["exec_code"]
-            events = agent.env.step(
+            events_ar = agent.env.step(
                 f"await saveRewards(bot, {U.json_dumps(self.reward_item_names)}, '{self.save_dir}/episodes/episode{self.episode}');"
                 + code,
                 programs=agent.skill_manager.programs,
             )
-            agent.recorder.record(events, agent.task)  # what is this for??
-            self.update_chest_memory(events[-1][1]["nearbyChests"])
-            result.update({'events': events})
+            agent.recorder.record(events_ar, agent.task)  # what is this for??
+            self.update_chest_memory(events_ar[-1][1]["nearbyChests"])
+            result.update({'events': events_ar})
 
         # update messages for next round
-        def update_agent(agent, result, parsed_result, events, success, critique, contract_critique, emeralds):
+        def update_agent(agent, result, parsed_result, events_ar, success, critique, contract_critique, emeralds):
             new_skills = agent.skill_manager.retrieve_skills(
                 query=agent.context
                       + "\n\n"
-                      + agent.action_agent.summarize_chatlog(events)
+                      + agent.action_agent.summarize_chatlog(events_ar)
             )
             system_message = agent.action_agent.render_system_message(skills=new_skills)
             human_message = agent.action_agent.render_human_message(
-                events=events,
+                events=events_ar,
                 code=parsed_result["program_code"],
                 task=agent.task,
                 contract=agent.contract,
@@ -466,7 +464,7 @@ class MultiAgentVoyager:
                 critique=critique,
                 contract_critique=contract_critique,
             )
-            agent.last_events = copy.deepcopy(events)
+            agent.last_events = copy.deepcopy(events_ar)
             agent.messages = [system_message, human_message]
             assert len(agent.messages) == 2
             agent.action_agent_rollout_num_iter += 1
@@ -628,7 +626,7 @@ class MultiAgentVoyager:
             contract_file.write(self.contract)
 
         # set agent tasks and contract
-        self.run_threads(lambda agent, _, args: agent.reset(task=agent.task, **args), args={'args': {
+        self.run_threads(lambda agent_t, _, args: agent_t.reset(task=agent_t.task, **args), args={'args': {
             'contract': self.contract,
             'scenario': self.scenario_description,
             'context': "",
@@ -643,7 +641,7 @@ class MultiAgentVoyager:
             else:
                 U.f_mkdir(f"{self.save_dir}/episodes/episode{self.episode}")
 
-                # dont load episode if its already loaded
+                # don't load episode if its already loaded
                 reload = False if self.episode == 0 else True
                 results = self.run_episode(reload=reload, reset='soft')
 
@@ -690,50 +688,3 @@ class MultiAgentVoyager:
         res = requests.post(f"{server}/stop")
         for agent in self.agents + [self.judge]:
             agent.env.mineflayer.stop()
-
-        # killing voyagers
-        # self.agents[0].close()
-        # for agent in self.agents:
-        #     agent.close()
-
-    # def run_episode(self, tasks, contract="", context=""):
-    #     results = []
-    #     threads = []
-
-    #     # Start threads to run rollouts concurrently
-    #     for i, agent in enumerate(self.agents):
-    #         task = tasks[i]
-    #         result = {}
-    #         thread = threading.Thread(target=self.step, args=(agent, result, task, contract, context), daemon=True)
-    #         threads.append(thread)
-    #         results.append(result)
-    #         thread.start()
-
-    #     # Wait for all threads to finish
-    #     for thread in threads:
-    #         thread.join()
-
-    #     # TODO: terminate threads that don't complete and update results to indicate timeout
-    #     # time.sleep(45)
-    #     # self.load_scenario(self.scenario)
-    #     # for i, agent in enumerate(self.agents):
-    #     #     agent.env.reset(
-    #     #         options={
-    #     #             "mode": "hard",
-    #     #             "wait_ticks": 80,
-    #     #         }
-    #     #     )
-
-    #     print('threads finished')
-
-    #     return results
-
-    # def step(self, agent, result, task, contract, context):
-    #     # resetting because every step is a new episode
-    #     agent.reset(
-    #         task=task, 
-    #         contract=contract, 
-    #         context=context, 
-    #         reset_env=False)
-    #     messages, reward, done, info = messages, reward, done, info = agent.step()
-    #     result.update({"messages": messages, "reward": reward, "done": done, "info": info})

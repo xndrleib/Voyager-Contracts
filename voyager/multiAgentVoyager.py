@@ -194,8 +194,8 @@ class MultiAgentVoyager:
                             for pos in positions:
                                 if not pos.strip():  # Check if the position is an empty string
                                     continue
-                                x, y, z = map(int, pos.strip('()').split(', '))
-                                coord_dict = {'x': x, 'y': y, 'z': z}  # Convert coords to dictionary format
+                                x_el, y_el, z_el = map(int, pos.strip('()').split(', '))
+                                coord_dict = {'x': x_el, 'y': y_el, 'z': z_el}  # Convert coords to dictionary format
                                 block_positions_ar[block].append(coord_dict)
 
             # Removing block types with no positions found

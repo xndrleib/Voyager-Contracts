@@ -112,7 +112,8 @@ app.post("/start", (req, res) => {
         bot.loadPlugin(tool);
         bot.loadPlugin(collectBlock);
         bot.loadPlugin(pvp);
-        bot.loadPlugin(minecraftHawkEye);
+        // https://github.com/PrismarineJS/mineflayer/issues/3013
+        bot.loadPlugin(minecraftHawkEye.default);
 
         // bot.collectBlock.movements.digCost = 0;
         // bot.collectBlock.movements.placeCost = 0;

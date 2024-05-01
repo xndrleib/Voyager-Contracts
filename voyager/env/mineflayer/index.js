@@ -213,7 +213,7 @@ app.post("/step", async (req, res) => {
     const { Vec3 } = require("vec3");
 
     // Set up pathfinder
-    const movements = new Movements(bot, mcData);
+    const movements = new Movements(bot);
     bot.pathfinder.setMovements(movements);
 
     bot.globalTickCounter = 0;

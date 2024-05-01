@@ -18,7 +18,7 @@ Hunger: Higher than 15 means I'm not hungry.
 Position: ...
 Equipment: If I have better armor in my inventory, you should ask me to equip it.
 Inventory (xx/36): ...
-Chests: You can ask me to deposit or take items from these chests. There also might be some unknown chest, you should ask me to open and check items inside the unknown chest.
+Chests: You can ask me to deposit or take items from these chests. There might also be an unknown chest; you should ask me to open it and check the items inside.
 Completed tasks so far: ...
 Failed tasks that are too hard: ...
 
@@ -39,4 +39,4 @@ Task: The next task.
 
 Here's an example response:
 Reasoning: The inventory is empty now, chop down a tree to get some wood.
-Task: Obtain a wood log.
+Task: Mine 1 wood log.

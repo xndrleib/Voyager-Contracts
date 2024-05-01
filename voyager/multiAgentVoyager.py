@@ -9,6 +9,12 @@ import voyager.utils as U
 from voyager import Voyager
 from voyager.negotiation import Negotiation, Negotiator
 
+import logging
+
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+                    filename=f'logs/program/{datetime.now().strftime("%Y-%m-%d %H%M%S")}.log',
+                    encoding='utf-8', level=logging.DEBUG)
+
 
 class MultiAgentVoyager:
     def __init__(self, num_agents=2, server_port=3000, usernames=("Gizmo", "Glitch"), judge_username="Judy",
@@ -115,22 +121,31 @@ class MultiAgentVoyager:
         For example,
         args = {'Voyager3000': {'arg1': 1, 'arg2': 2}, 'Voyager3001': {'arg1': 3, 'arg2': 4}}
         """
+        logging.info(f"Starting threads for agents with target function: {target}")
         agents = self.agents + [self.judge] if include_judge else self.agents
+        logging.debug(f"Agents included for threading: {[agent.username for agent in agents]}")
+
         if args is None:
             args = {agent.username: {} for agent in agents}
+            logging.debug("No arguments provided; using empty dictionaries for all agents.")
         if shared_args:
             args = {agent.username: args for agent in agents}
+            logging.debug("Using shared arguments for all agents.")
 
         results = {}
         threads = []
         for agent in agents:
             result = {}
+            logging.debug(f"Arguments for agent {agent.username}:\n{args[agent.username]}")
             thread = threading.Thread(target=target, args=(agent, result), kwargs=args[agent.username], daemon=True)
             results[agent.username] = result
             threads.append(thread)
             thread.start()
+            logging.info(f"Thread started for agent {agent.username}")
         for thread in threads:
             thread.join()
+            logging.info(f"Thread for agent {thread.name} has completed")
+        logging.info(f"All threads have completed. Results:\n{results}")
         return results
 
     def reset_agents(self, mode='soft', timeout=10):
@@ -312,35 +327,42 @@ class MultiAgentVoyager:
             agent.action_agent.chest_memory = self.chest_memory
 
     def check_task_success(self, events, max_retries=5):
-
-        def ai_check_task_success(agent, result, events_ar):
+        def ai_check_task_success(agent, result, events):
+            logging.info(f"Starting task success check for agent: {agent.username}")
             if agent.username == self.judge_username:
                 critic_agent = agent.judge_agent
             else:
                 critic_agent = agent.critic_agent
 
+            logging.debug(f"Using critic agent:\n{critic_agent}")
+
             human_message = critic_agent.render_human_message(
-                events=events_ar,
+                events=events,
                 task=agent.task,
                 scenario=self.scenario_description,
                 contract=self.contract,
                 context=agent.context,
-                chest_observation=agent.action_agent.render_chest_observation(),
-            )
-            messages = [
-                critic_agent.render_system_message(),
-                human_message,
-            ]
-            critic_response = critic_agent.ai_check_task_success(
-                messages=messages, max_retries=max_retries
-            )
+                chest_observation=agent.action_agent.render_chest_observation())
+
+            logging.debug(f"Human message rendered:\n{human_message}")
+
+            messages = [critic_agent.render_system_message(),
+                        human_message]
+
+            logging.debug(f"Messages prepared for AI check:\n{messages}")
+
+            critic_response = critic_agent.ai_check_task_success(messages=messages, max_retries=max_retries)
+
+            logging.debug(f"Critic response received:\n{critic_response}")
 
             if agent.username == self.judge_username:
                 emeralds, critique = critic_response
                 success = None
+                logging.debug(f"Judge response:\n{critique},\nEmeralds:\n{emeralds}")
             else:
                 success, critique = critic_response
                 emeralds = None
+                logging.debug(f"Agent success status:\n{success},\nCritique:\n{critique}")
 
             result.update({'success': success, 'critique': critique, 'emeralds': emeralds})
 
@@ -397,11 +419,12 @@ class MultiAgentVoyager:
     def run_episode(self, episode=None, reload=True, reset='soft'):
         # get ai_message and parse
         def get_ai_message_parse(agent, result):
+            logging.debug(f"Getting AI message for agent {agent.username}")
             if agent.action_agent_rollout_num_iter < 0:
                 raise ValueError("Agent must be reset before stepping")
 
             ai_message = agent.action_agent.llm(agent.messages)
-            agent.logger(f"\033[34m****Action Agent ai message****\n{ai_message.content}\033[0m")
+            logging.info(f"AI message for {agent.username}:\n{ai_message.content}")
             agent.conversations.append(
                 (agent.messages[0].content, agent.messages[1].content, ai_message.content)
             )
@@ -410,11 +433,11 @@ class MultiAgentVoyager:
 
         # do env.step
         def env_step(agent, result, parsed_result):
+            logging.debug(f"Executing environment step for {agent.username}")
             if not isinstance(parsed_result, dict):
                 assert isinstance(parsed_result, str)
-                print('parsed_result', parsed_result)
+                logging.error(f"Invalid parsed result type for {agent.username}:\n{parsed_result}")
                 agent.recorder.record([], agent.task)
-                agent.logger(f"\033[34m{parsed_result} Trying again!\033[0m")
 
             code = parsed_result["program_code"] + "\n" + parsed_result["exec_code"]
             events_ar = agent.env.step(
@@ -427,15 +450,16 @@ class MultiAgentVoyager:
             result.update({'events': events_ar})
 
         # update messages for next round
-        def update_agent(agent, result, parsed_result, events_ar, success, critique, contract_critique, emeralds):
+        def update_agent(agent, result, parsed_result, events, success, critique, contract_critique, emeralds):
+            logging.debug(f"Updating agent {agent.username}")
             new_skills = agent.skill_manager.retrieve_skills(
                 query=agent.context
                       + "\n\n"
-                      + agent.action_agent.summarize_chatlog(events_ar)
+                      + agent.action_agent.summarize_chatlog(events)
             )
             system_message = agent.action_agent.render_system_message(skills=new_skills)
             human_message = agent.action_agent.render_human_message(
-                events=events_ar,
+                events=events,
                 code=parsed_result["program_code"],
                 task=agent.task,
                 contract=agent.contract,
@@ -444,7 +468,7 @@ class MultiAgentVoyager:
                 critique=critique,
                 contract_critique=contract_critique,
             )
-            agent.last_events = copy.deepcopy(events_ar)
+            agent.last_events = copy.deepcopy(events)
             agent.messages = [system_message, human_message]
             assert len(agent.messages) == 2
             agent.action_agent_rollout_num_iter += 1
@@ -471,13 +495,15 @@ class MultiAgentVoyager:
         # replace chat events with those from the agent who lived longest and save both players observations
         # note: this is a hacky solution to a problem that should be fixed in the future
         def fix_chat_events(events_ar):
+            logging.info(f"Entering fix_chat_events")
+
             # collect all chat events for each agent
             chat_events = {agent.username: [] for agent in self.agents}
             other_events = {agent.username: [] for agent in self.agents}
             for agent, other_agent in [self.agents, self.agents[::-1]]:  # wont work if num_agents != 2
                 agent_events = events_ar.get(agent.username, {}).get('events', [])
                 if not agent_events:
-                    print('fix_chat_events function: Agent events is empty')
+                    logging.warning(f"fix_chat_events function: Agent events is empty for {agent.username}")
 
                 for (event_type, event) in agent_events:
                     if event_type == 'onChat':
@@ -488,6 +514,10 @@ class MultiAgentVoyager:
                         other_events[agent.username].append((event_type, event))
                     else:
                         other_events[agent.username].append((event_type, event))
+
+            logging.debug(f"Chat events collected:\n{chat_events}")
+            logging.debug(f"Other events collected:\n{other_events}")
+
             # copy in the longest thread of chats
             longest_thread = max(chat_events.values(), key=len)
             new_events = {agent.username: {'events': longest_thread + other_events[agent.username]} for agent in
@@ -495,11 +525,14 @@ class MultiAgentVoyager:
 
             # copy one of the agents events for the judge
             new_events[self.judge_username] = new_events[self.agents[0].username]
-
+            logging.debug(f"Final reorganized events:\n{new_events}")
             return new_events
+
+        logging.info(f"Starting run_episode with reload={reload}, reset={reset}, episode={episode}")
 
         # reset for both agents and load scenario
         if reload:
+            logging.info("Reloading scenario...")
             self.load_scenario(reset=reset)
             # time.sleep(3) # wait for voyagers and scenario to load
 
@@ -508,30 +541,33 @@ class MultiAgentVoyager:
         if episode is not None:
             if not isinstance(episode, int):
                 raise ValueError("episode must be an integer")
-
+            logging.info(f"Loading specific episode: {episode}")
             episode_results = self.load_episode(episode)
             self.run_threads(env_step, args=episode_results)
             self.reset_agents()
             return
 
         # get ai_message and parse in parallel
-        print('get_ai_message_parse')
+        logging.info('Processing AI messages and parsing results...')
         parsed_results = self.run_threads(get_ai_message_parse)
 
         # save episode
         self.save_episode(parsed_results)
 
         # do env.step in parallel`
-        print('env_step')
+        logging.info('Executing environment steps based on parsed AI messages...')
         events = self.run_threads(env_step, args=parsed_results)
+
         self.reset_agents()
 
-        # check for task success
-        print('check_task_success')
+        logging.info('Fixing chat events...')
         events = fix_chat_events(events)
+        # check for task success
+        logging.info('Checking task success for the episode...')
+
         critic_response = self.check_task_success(events)
 
-        print(critic_response)
+        logging.info(f"Task success response:\n{critic_response}")
 
         # update agents (note this function does not need to be run with threads; could add a flag to just iterate)
         results = self.run_threads(update_agent, args={
@@ -586,38 +622,49 @@ class MultiAgentVoyager:
             input("Warning: loaded from saved directory. Continuing may overwrite saved files. "
                   "Press enter to continue...")
 
+        logging.info('Loading scenario...')
         self.load_scenario(reset='hard')
 
-        # load the contract
         if self.contract_mode == "auto":
             if self.contract is not None:
-                print("Warning: contract provided but contract_mode is 'auto'. Contract will be ignored.")
-            print('Negotiating contract...')
+                logging.warning("Contract provided but contract_mode is 'auto'. Contract will be ignored.")
+            logging.info('Negotiating contract...')
             self.negotiate_contract()
+        elif self.contract_mode == "manual":
+            logging.info('Contract is provided manually')
 
-        # save contract to file
         with open(f"{self.save_dir}/contract.txt", 'w') as contract_file:
+            logging.info(f'Saving the contract to {self.save_dir}/contract.txt...')
             contract_file.write(self.contract)
 
         # set agent tasks and contract
-        self.run_threads(lambda agent_t, _, args: agent_t.reset(task=agent_t.task, **args), args={'args': {
-            'contract': self.contract,
-            'scenario': self.scenario_description,
-            'context': "",
-            'reset_env': False, }}, shared_args=True)
+        logging.info('Initializing threads for agents...')
+        self.run_threads(lambda agent_t, _, args: agent_t.reset(task=agent_t.task, **args),
+                         args={
+                             'args': {
+                                 'contract': self.contract,
+                                 'scenario': self.scenario_description,
+                                 'context': "",
+                                 'reset_env': False,
+                             }
+                         },
+                         shared_args=True)
+        logging.info('Threads initialized.')
 
         replay = False
         done = False
         while not done or replay:
             if replay:
-                print('Repeating episode...')
+                logging.info('Repeating episode...')
                 self.run_episode(episode=self.episode, reload=True, reset='soft')
             else:
                 U.f_mkdir(f"{self.save_dir}/episodes/episode{self.episode}")
 
                 # don't load episode if its already loaded
                 reload = False if self.episode == 0 else True
+                logging.info(f'Starting episode {self.episode}...')
                 results = self.run_episode(reload=reload, reset='soft')
+                logging.info(f'Episode {self.episode} completed.')
 
                 # If all tasks were successful, stop
                 # agent_successes = [result['info']['success'] for result in results.values()]
@@ -628,7 +675,7 @@ class MultiAgentVoyager:
 
                 # Print successes
                 for agent in self.agents:
-                    print(f"{agent.username} {{emeralds: {results[agent.username]['info']['emeralds']}}}")
+                    logging.info(f"{agent.username} has {results[agent.username]['info']['emeralds']} emeralds.")
 
                 # save emerald values
                 U.json_dump({agent.username: results[agent.username]['info']['emeralds'] for agent in self.agents},
@@ -644,18 +691,21 @@ class MultiAgentVoyager:
             # if not continuous mode wait to continue
             if self.continuous:
                 self.episode += 1
+                logging.info(f'Episode {self.episode} completed, moving to next episode.')
                 if self.episode == self.num_episodes:
                     done = True
-
+                    logging.info('Reached the maximum number of episodes. Ending simulation.')
             else:
                 user_response = input("Press enter to continue or 'r' to repeat...")
                 if user_response == 'r':
                     replay = True
+                    logging.info('User chose to repeat the episode.')
                 else:
                     replay = False
                     self.episode += 1  # only increment if not replaying
+                    logging.info(f'User chose to continue. Preparing episode {self.episode}.')
 
-        print('Quitting...')
+        logging.info('Simulation completed. Exiting...')
 
     def close(self):
         server = self.judge.env.server

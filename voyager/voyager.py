@@ -230,7 +230,7 @@ class Voyager:
         events = self.env.step("")
         skills = self.skill_manager.retrieve_skills(query=self.context)
         self.logger(
-            f"\033[33mRender Action Agent system message with {len(skills)} skills\033[0m"
+            f"Render Action Agent system message with {len(skills)} skills"
         )
         system_message = self.action_agent.render_system_message(skills=skills)
         human_message = self.action_agent.render_human_message(
@@ -239,7 +239,7 @@ class Voyager:
         )
         self.messages = [system_message, human_message]
         self.logger(
-            f"\033[32m****Action Agent human message****\n{human_message.content}\033[0m"
+            f"****Action Agent human message****\n{human_message.content}"
         )
         assert len(self.messages) == 2
         self.conversations = []

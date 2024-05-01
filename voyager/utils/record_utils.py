@@ -6,11 +6,11 @@ from .json_utils import *
 
 class EventRecorder:
     def __init__(
-        self,
-        ckpt_dir="ckpt",
-        resume=False,
-        init_position=None,
-        logger=None,
+            self,
+            ckpt_dir="ckpt",
+            resume=False,
+            init_position=None,
+            logger=None,
     ):
         self.ckpt_dir = ckpt_dir
         self.item_history = set()
@@ -42,10 +42,10 @@ class EventRecorder:
             if event_type == "observe":
                 self.update_elapsed_time(event)
         self.logger(
-            f"\033[96m****Recorder message: {self.elapsed_time} ticks have elapsed****\033[0m\n"
-            f"\033[96m****Recorder message: {self.iteration} iteration passed****\033[0m"
+            f"****Recorder message: {self.elapsed_time} ticks have elapsed****\n"
+            f"****Recorder message: {self.iteration} iteration passed****"
         )
-        dump_json(events, f_join(self.ckpt_dir, "events", task[:30])) # sliced the first 30 characters of the task name
+        dump_json(events, f_join(self.ckpt_dir, "events", task[:30]))  # sliced the first 30 characters of the task name
 
     def resume(self, cutoff=None):
         self.item_history = set()

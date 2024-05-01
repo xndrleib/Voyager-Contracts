@@ -54,7 +54,7 @@ def skins_commands(url):
 
 def parse_chest_contents(chest_contents):
     if not isinstance(chest_contents, dict):
-        raise ('Chest contents must be a dictionary')
+        raise 'Chest contents must be a dictionary'
 
     items = []
     i = 0

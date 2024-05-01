@@ -17,7 +17,7 @@ async function replaceMinedBlock(bot, name, position, facing = null) {
         } else {
             await bot.chat(`/setblock ${x} ${y} ${z} ${name}`);
         }
-        
+
         await bot.waitForTicks(1);
     }
 }
@@ -103,23 +103,23 @@ const path = require('path');
 async function saveRewards(bot, rewardNames, save_dir) {
     setInterval(() => {
         const items = bot.inventory.items();
-        
+
         // Iterate over each rewardName in rewardNames
         rewardNames.forEach(rewardName => {
             let rewardCount = 0;
-            
+
             items.forEach((item) => {
                 if (item.name === rewardName) {
                     rewardCount += item.count;
                 }
             });
-            
+
             const botName = bot.username; // Get the bot's username
             // Modify the fileName to include the rewardName as well
             const fileName = path.join(save_dir, `${botName}_${rewardName}_reward.txt`);
-            
+
             // Write the count to a file
-            fs.writeFile(fileName, `${rewardCount}\n`, { flag: 'a' }, err => {
+            fs.writeFile(fileName, `${rewardCount}\n`, {flag: 'a'}, err => {
                 if (err) console.error('Error writing to file:', err);
             });
         });

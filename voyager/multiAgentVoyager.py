@@ -11,33 +11,17 @@ from voyager.negotiation import Negotiation, Negotiator
 
 
 class MultiAgentVoyager:
-
-    def __init__(self,
-                 num_agents=2,
-                 server_port=3000,
-                 usernames=("Gizmo", "Glitch"),
-                 judge_username="Judy",
-                 scenario_file=None,
-                 save_dir=None,
-                 critic_mode="auto",
-                 contract_mode="auto",
-                 contract=None,
-                 continuous=True,
-                 episode_timeout=120,
-                 num_episodes=3,
-                 negotiator_model_name="gpt-4",
-                 negotiator_temperature=0.7,
-                 skinurls=None,
-                 options=None
-                 ):
+    def __init__(self, num_agents=2, server_port=3000, usernames=("Gizmo", "Glitch"), judge_username="Judy",
+                 scenario_file=None, save_dir=None, critic_mode="auto", contract_mode="auto", contract=None,
+                 continuous=True, episode_timeout=120, num_episodes=3, negotiator_model_name="gpt-4",
+                 negotiator_temperature=0.7, skinurls=None, options=None):
 
         if skinurls is None:
-            skinurls = [
-                "https://images2.imgbox.com/60/3d/2bJnlM8U_o.png",  # player 1 skin
-                "https://images2.imgbox.com/a7/6c/hZRGGRAS_o.png"  # player 2 skin
-            ]
+            skinurls = ["https://images2.imgbox.com/60/3d/2bJnlM8U_o.png",  # player 1 skin
+                        "https://images2.imgbox.com/a7/6c/hZRGGRAS_o.png"]  # player 2 skin
         if options is None:
             options = {}
+
         self.scenario_file = scenario_file
         self.scenario_description = None
         self.scenario_code = None
@@ -122,8 +106,6 @@ class MultiAgentVoyager:
                 **options
             )
             self.agents.append(agent)
-
-        # time.sleep(1)
 
     def run_threads(self, target, args=None, include_judge=False, shared_args=False):
         """
@@ -318,13 +300,11 @@ class MultiAgentVoyager:
                 if isinstance(chest, dict):
                     self.chest_memory[position] = chest
                 if chest == "Invalid":
-                    print(
-                        f"\033[32mRemoving chest {position}: {chest}\033[0m"
-                    )
+                    print(f"Removing chest {position}: {chest}")
                     self.chest_memory.pop(position)
             else:
                 if chest != "Invalid":
-                    print(f"\033[32mSaving chest {position}: {chest}\033[0m")
+                    print(f"Saving chest {position}: {chest}")
                     self.chest_memory[position] = chest
 
         # update agent chest memories
@@ -469,10 +449,7 @@ class MultiAgentVoyager:
             assert len(agent.messages) == 2
             agent.action_agent_rollout_num_iter += 1
 
-            done = (
-                    agent.action_agent_rollout_num_iter >= agent.action_agent_task_max_retries
-                    or success
-            )
+            done = (agent.action_agent_rollout_num_iter >= agent.action_agent_task_max_retries or success)
             info = {
                 "task": agent.task,
                 "success": success,
@@ -487,7 +464,7 @@ class MultiAgentVoyager:
                 info["program_name"] = parsed_result["program_name"]
 
             agent.logger(
-                f"\033[32m****Action Agent human message****\n{agent.messages[-1].content}\033[0m"
+                f"****Action Agent human message****\n{agent.messages[-1].content}"
             )
             result.update({'messages': agent.messages, 'done': done, 'info': info})
 
@@ -564,9 +541,7 @@ class MultiAgentVoyager:
                 **critic_response[agent.username],
                 'contract_critique': critic_response[self.judge.username]['critique'][agent.username],
                 'emeralds': critic_response[self.judge.username]['emeralds'][agent.username],
-
-            } for agent in self.agents}
-                                   )
+            } for agent in self.agents})
 
         return results
 
@@ -607,10 +582,9 @@ class MultiAgentVoyager:
         self.contract = negotiation.get_contract()
 
     def run(self):
-
         if self.load_from_save:
-            input(
-                "Warning: loaded from saved directory. Continuing may overwrite saved files. Press enter to continue...")
+            input("Warning: loaded from saved directory. Continuing may overwrite saved files. "
+                  "Press enter to continue...")
 
         self.load_scenario(reset='hard')
 

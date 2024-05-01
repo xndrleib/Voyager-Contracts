@@ -1,6 +1,6 @@
 // send a message to another player indicating that the bot has finished its turn
 async function sendSignal(bot) {
-  bot.chat("[player signal]")
+    bot.chat("[player signal]")
 }
 
 // // sleeps until another player executes sendSignal
@@ -30,35 +30,35 @@ async function sendSignal(bot) {
 // }
 
 // run task and sleep until another player executes sendSignal
-async function waitSignal(bot, task=null, timeoutDuration = 30000) {
-  let timeout;
+async function waitSignal(bot, task = null, timeoutDuration = 30000) {
+    let timeout;
 
-  // This is the logic for the chat listener, the same as before
-  const chatListening = new Promise((resolve, reject) => {
-    function chatHandler(username, message) {
-      if (username !== bot.username && message === '[player signal]') {
-        bot.chat('[signal recieved]')
-        clearTimeout(timeout);
-        resolve();
-        bot.removeListener('chat', chatHandler);
-      }
+    // This is the logic for the chat listener, the same as before
+    const chatListening = new Promise((resolve, reject) => {
+        function chatHandler(username, message) {
+            if (username !== bot.username && message === '[player signal]') {
+                bot.chat('[signal recieved]')
+                clearTimeout(timeout);
+                resolve();
+                bot.removeListener('chat', chatHandler);
+            }
+        }
+
+        bot.on('chat', chatHandler);
+        bot.chat("[waiting signal]")
+
+        timeout = setTimeout(() => {
+            bot.removeListener('chat', chatHandler);
+            bot.chat("[signal timeout]");
+            resolve()
+        }, timeoutDuration);
+    });
+
+    let taskExecution;
+    if (task) {
+        taskExecution = task(bot);
+        await Promise.all([chatListening, taskExecution]);
+    } else {
+        await chatListening;
     }
-
-    bot.on('chat', chatHandler);
-    bot.chat("[waiting signal]")
-
-    timeout = setTimeout(() => {
-      bot.removeListener('chat', chatHandler);
-      bot.chat("[signal timeout]");
-      resolve()
-    }, timeoutDuration);
-  });
-
-  let taskExecution;
-  if (task) {
-    taskExecution = task(bot);
-    await Promise.all([chatListening, taskExecution]);
-  } else {
-    await chatListening;
-  }
 }

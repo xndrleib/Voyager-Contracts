@@ -11,7 +11,9 @@ args = parser.parse_args()
 
 azure_login = None
 mc_port = args.port
-server_port=args.server_port
+server_port = args.server_port
+
+model = "gpt-3.5-turbo"  # "gpt-4-0613" | "gpt-4-turbo-2024-04-09" | gpt-3.5-turbo
 
 options = {
     'azure_login': azure_login,
@@ -24,8 +26,8 @@ options = {
     'action_agent_task_max_retries': 50,
     'action_agent_show_chat_log': True,
     'action_agent_temperature': 0.3,
-    'action_agent_model_name': "gpt-3.5-turbo",  # #"gpt-4-0613",
-    'critic_agent_model_name': "gpt-3.5-turbo",  # "gpt-3.5-turbo", #"gpt-4-0613",
+    'action_agent_model_name': model,
+    'critic_agent_model_name': model
 }
 
 contract = """

@@ -18,7 +18,8 @@ class Negotiator:
 
         # Including both tasks in the system prompt
         system_prompt = load_prompt("negotiator")
-        self.system_prompt = f"Your name is {name}\n\nYour Task: {task}\n\nOther Agent's Name: {other_name}\n\nOther Agent's Task: {other_task}\n\nScenario: {scenario}\n\n{system_prompt}"
+        self.system_prompt = (f"Your name is {name}\n\nYour Task: {task}\n\nOther Agent's Name: {other_name}\n\n"
+                              f"Other Agent's Task: {other_task}\n\nScenario: {scenario}\n\n{system_prompt}")
 
         self.reset()
 
@@ -119,8 +120,8 @@ class Negotiation:
 
     def simulate(self):
         if len(self.conversation_log) > 0:
-            raise Exception(
-                "Conversation has already been simulated. Use display() to see the conversation. Or use reset() to start a new conversation.")
+            raise Exception("Conversation has already been simulated. Use display() to see the conversation. Or use "
+                            "reset() to start a new conversation.")
 
         accept = False
         for turn in range(self.max_turns):
@@ -154,7 +155,7 @@ class Negotiation:
 
         # Summarize the conversation
         summary = self.summarize()
-        self.logger(f"\033[90mNegotiation Summary:\n{summary}\n\033[0m", print_flag=False)
+        self.logger(f"Negotiation Summary:\n{summary}\n", print_flag=False)
 
     def get_contract(self):
         if self.contract is None:

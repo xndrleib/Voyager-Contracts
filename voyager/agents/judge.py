@@ -35,7 +35,6 @@ class JudgeAgent:
         args:
             task: a dictionary of task for each agent in the form of {agent_name: task}
         """
-
         chat_messages = []
         error_messages = []
         # FIXME: damage_messages is not used
@@ -129,7 +128,7 @@ class JudgeAgent:
         else:
             observation += f"Context: None\n\n"
 
-        self.logger(f"\033[31m****Judge Agent human message****\n{observation}\033[0m")
+        self.logger(f"****Judge Agent human message****\n{observation}")
         return HumanMessage(content=observation)
 
     # def human_check_task_success(self):
@@ -146,16 +145,14 @@ class JudgeAgent:
 
     def ai_check_task_success(self, messages, max_retries=5):
         if max_retries == 0:
-            self.logger(
-                "\033[31mFailed to parse Judge Agent response. Consider updating your prompt.\033[0m"
-            )
+            self.logger("Failed to parse Judge Agent response. Consider updating your prompt.")
             return False, ""
 
         if messages[1] is None:
             return False, ""
 
         critic = self.llm(messages).content
-        self.logger(f"\033[31m****Judge Agent ai message****\n{critic}\033[0m")
+        self.logger(f"****Judge Agent ai message****\n{critic}")
 
         # fix this 
         try:
@@ -179,7 +176,7 @@ class JudgeAgent:
                 
             return emeralds, critique
         except Exception as e:
-            self.logger(f"\033[31mError parsing judge response: {e} Trying again!\033[0m")
+            self.logger(f"Error parsing judge response: {e} Trying again!")
             return self.ai_check_task_success(
                 messages=messages,
                 max_retries=max_retries - 1,

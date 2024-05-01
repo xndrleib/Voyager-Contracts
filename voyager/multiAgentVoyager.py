@@ -396,7 +396,7 @@ class MultiAgentVoyager:
         if self.critic_mode == "manual":
             return human_check_task_success()
 
-        return self.run_threads(ai_check_task_success, args={'events': events}, include_judge=True)
+        return self.run_threads(ai_check_task_success, args=events, include_judge=True)
 
     def save_episode(self, results):
         U.dump_json(results, f"{self.save_dir}/episodes/episode{self.episode}/code.json")

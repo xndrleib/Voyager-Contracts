@@ -148,10 +148,10 @@ class Negotiation:
             try:
                 self.contract = self.conversation_log[-2][2].split('[contract]')[1].split('[contract end]')[0].strip()
             except IndexError:
-                raise Exception("Negotation failure. Contract accepted but no contract was found. Please try again.")
+                raise Exception("Negotiation failure. Contract accepted but no contract was found. Please try again.")
             self.logger(f"Contract:\n{self.contract}\n")
         else:
-            raise Exception("Negotation failure. No contract was found. Please try again.")
+            raise Exception("Negotiation failure. No contract was found. Please try again.")
 
         # Summarize the conversation
         summary = self.summarize()

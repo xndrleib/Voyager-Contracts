@@ -1,7 +1,7 @@
 import os.path
 import time
 import warnings
-from typing import SupportsFloat, Any, Tuple, Dict
+from typing import Any, Tuple, Dict
 
 import requests
 import json

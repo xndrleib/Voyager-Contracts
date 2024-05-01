@@ -208,10 +208,10 @@ class MultiAgentVoyager:
 
         x, y, z = center_position['x'], center_position['y'], center_position['z']
 
-        # Remove blocks of type scenario_block_types so they don't interfere with the scenario
+        # Remove blocks of type scenario_block_types, so they don't interfere with the scenario
         if remove_blocks:
-            input(
-                f"Center position is set to {center_position}. Blocks of type {scenario_block_types} will be deleted nearby. Press enter to continue...")
+            input(f"Center position is set to {center_position}. Blocks of type {scenario_block_types} will be "
+                  f"deleted nearby. Press enter to continue...")
             print("Removing blocks...\n")
             self.judge.env.step(
                 f"await bot.chat('/tp {x} {y} {z}');"
@@ -441,7 +441,8 @@ class MultiAgentVoyager:
 
             code = parsed_result["program_code"] + "\n" + parsed_result["exec_code"]
             events_ar = agent.env.step(
-                f"await saveRewards(bot, {U.json_dumps(self.reward_item_names)}, '{self.save_dir}/episodes/episode{self.episode}');"
+                f"await saveRewards(bot, {U.json_dumps(self.reward_item_names)}, "
+                + f"'{self.save_dir}/episodes/episode{self.episode}');"
                 + code,
                 programs=agent.skill_manager.programs,
             )
@@ -453,9 +454,7 @@ class MultiAgentVoyager:
         def update_agent(agent, result, parsed_result, events, success, critique, contract_critique, emeralds):
             logging.debug(f"Updating agent {agent.username}")
             new_skills = agent.skill_manager.retrieve_skills(
-                query=agent.context
-                      + "\n\n"
-                      + agent.action_agent.summarize_chatlog(events)
+                query=agent.context + "\n\n" + agent.action_agent.summarize_chatlog(events)
             )
             system_message = agent.action_agent.render_system_message(skills=new_skills)
             human_message = agent.action_agent.render_human_message(
@@ -709,6 +708,6 @@ class MultiAgentVoyager:
 
     def close(self):
         server = self.judge.env.server
-        res = requests.post(f"{server}/stop")
+        _ = requests.post(f"{server}/stop")
         for agent in self.agents + [self.judge]:
             agent.env.mineflayer.stop()

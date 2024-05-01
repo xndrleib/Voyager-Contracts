@@ -9,15 +9,7 @@ from .process_monitor import SubprocessMonitor
 
 
 class MinecraftInstance:
-    def __init__(
-        self,
-        client_id,
-        redirect_url,
-        secret_value,
-        version,
-        mineflayer,
-        log_path="logs",
-    ):
+    def __init__(self, client_id, redirect_url, secret_value, version, mineflayer, log_path="logs"):
         self.client_id = client_id
         self.redirect_url = redirect_url
         self.secret_value = secret_value
@@ -68,9 +60,7 @@ class MinecraftInstance:
             ) = minecraft_launcher_lib.microsoft_account.get_secure_login_data(
                 self.client_id, self.redirect_url
             )
-            print(
-                f"Please open {login_url} in your browser and copy the url you are redirected into the prompt below."
-            )
+            print(f"Please open {login_url} in your browser and copy the url you are redirected into the prompt below.")
             code_url = input()
 
             try:

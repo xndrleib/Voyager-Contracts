@@ -12,24 +12,13 @@ import voyager.utils as U
 
 
 class SubprocessMonitor:
-    def __init__(
-        self,
-        commands: List[str],
-        name: str,
-        ready_match: str = r".*",
-        log_path: str = "logs",
-        callback_match: str = r"^(?!x)x$",  # regex that will never match
-        callback: callable = None,
-        finished_callback: callable = None,
-    ):
+    def __init__(self, commands: List[str], name: str, ready_match: str = r".*", log_path: str = "logs",
+                 callback_match: str = r"^(?!x)x$", callback: callable = None, finished_callback: callable = None):
         self.commands = commands
-        start_time = time.strftime("%Y%m%d_%H%M%S")
         self.name = name
         self.logger = logging.getLogger(name)
-        handler = logging.FileHandler(U.f_join(log_path, f"{start_time}.log"))
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        handler = logging.FileHandler(U.f_join(log_path, f"{time.strftime('%Y%m%d_%H%M%S')}.log"))
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)

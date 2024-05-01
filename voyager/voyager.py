@@ -294,9 +294,7 @@ class Voyager:
                 events[-1][1]["inventory"] = new_events[-1][1]["inventory"]
                 events[-1][1]["voxels"] = new_events[-1][1]["voxels"]
             new_skills = self.skill_manager.retrieve_skills(
-                query=self.context
-                      + "\n\n"
-                      + self.action_agent.summarize_chatlog(events)
+                query=self.context + "\n\n" + self.action_agent.summarize_chatlog(events)
             )
             system_message = self.action_agent.render_system_message(skills=new_skills)
             human_message = self.action_agent.render_human_message(
@@ -312,13 +310,10 @@ class Voyager:
         else:
             assert isinstance(parsed_result, str)
             self.recorder.record([], self.task)
-            self.logger(f"\033[34m{parsed_result} Trying again!\033[0m")
+            self.logger(f"{parsed_result} Trying again!")
         assert len(self.messages) == 2
         self.action_agent_rollout_num_iter += 1
-        done = (
-                self.action_agent_rollout_num_iter >= self.action_agent_task_max_retries
-                or success
-        )
+        done = (self.action_agent_rollout_num_iter >= self.action_agent_task_max_retries or success)
         info = {
             "task": self.task,
             "success": success,
@@ -332,7 +327,7 @@ class Voyager:
             info["program_name"] = parsed_result["program_name"]
         else:
             self.logger(
-                f"\033[32m****Action Agent human message****\n{self.messages[-1].content}\033[0m"
+                f"****Action Agent human message****\n{self.messages[-1].content}"
             )
         return self.messages, 0, done, info
 
@@ -375,7 +370,7 @@ class Voyager:
                 max_retries=5,
             )
             self.logger(
-                f"\033[35mStarting task {task} for at most {self.action_agent_task_max_retries} times\033[0m"
+                f"Starting task {task} for at most {self.action_agent_task_max_retries} times"
             )
             try:
                 messages, reward, done, info = self.rollout(
@@ -402,17 +397,17 @@ class Voyager:
                 )
                 # use red color background to print the error
                 self.logger("Your last round rollout terminated due to error:")
-                self.logger(f"\033[41m{e}\033[0m")
+                self.logger(f"{e}")
 
             if info["success"]:
                 self.skill_manager.add_new_skill(info)
 
             self.curriculum_agent.update_exploration_progress(info)
             self.logger(
-                f"\033[35mCompleted tasks: {', '.join(self.curriculum_agent.completed_tasks)}\033[0m"
+                f"Completed tasks: {', '.join(self.curriculum_agent.completed_tasks)}"
             )
             self.logger(
-                f"\033[35mFailed tasks: {', '.join(self.curriculum_agent.failed_tasks)}\033[0m"
+                f"Failed tasks: {', '.join(self.curriculum_agent.failed_tasks)}"
             )
 
         return {
@@ -450,9 +445,7 @@ class Voyager:
         while self.curriculum_agent.progress < len(sub_goals):
             next_task = sub_goals[self.curriculum_agent.progress]
             context = self.curriculum_agent.get_task_context(next_task)
-            self.logger(
-                f"\033[35mStarting task {next_task} for at most {self.action_agent_task_max_retries} times\033[0m"
-            )
+            self.logger(f"Starting task {next_task} for at most {self.action_agent_task_max_retries} times")
             messages, reward, done, info = self.rollout(
                 task=next_task,
                 contract=contract,
@@ -460,9 +453,5 @@ class Voyager:
                 reset_env=reset_env,
             )
             self.curriculum_agent.update_exploration_progress(info)
-            self.logger(
-                f"\033[35mCompleted tasks: {', '.join(self.curriculum_agent.completed_tasks)}\033[0m"
-            )
-            self.logger(
-                f"\033[35mFailed tasks: {', '.join(self.curriculum_agent.failed_tasks)}\033[0m"
-            )
+            self.logger(f"Completed tasks: {', '.join(self.curriculum_agent.completed_tasks)}")
+            self.logger(f"Failed tasks: {', '.join(self.curriculum_agent.failed_tasks)}")

@@ -584,7 +584,7 @@ class MultiAgentVoyager:
         """
         Generates a contract for the agents to follow and sets self.contract to the contract.
         """
-        print('Negotiating contract...')
+        logging.info('Negotiating contract...')
 
         if self.scenario_description is None:
             raise ValueError("Scenario must be loaded before negotiating contract")
@@ -601,6 +601,7 @@ class MultiAgentVoyager:
             model=self.negotiator_model_name,
             temperature=self.negotiator_temperature,
         )
+
         negotiator2 = Negotiator(
             name=agent2.username,
             task=agent2.task,

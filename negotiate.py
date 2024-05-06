@@ -1,5 +1,7 @@
 from voyager.negotiation import Negotiation, Negotiator
 
+model = "gpt-4-turbo"  # "gpt-4-0613" | "gpt-4-turbo" | gpt-3.5-turbo
+
 scenario_description = ("There is a chest nearby which contains a stone pickaxe (can mine iron ore) "
                         "and iron pickaxe (can mine iron ore and diamonds). "
                         "There are separate mounds of iron and diamond ore nearby with an unknown number of each.")
@@ -10,9 +12,9 @@ task2 = ("Maximize points where 'iron ore' is worth 4 and 'diamond ore' is worth
          "Points are calculated at the end of the game by resources in player inventory.")
 
 agent1 = Negotiator(name="Alice", task=task1, other_name="Bob", other_task=task2,
-                    scenario=scenario_description, model="gpt-4-0613")
+                    scenario=scenario_description, model=model)
 agent2 = Negotiator(name="Bob", task=task2, other_name="Alice", other_task=task1,
-                    scenario=scenario_description, model="gpt-4-0613")
+                    scenario=scenario_description, model=model)
 
 conversation = Negotiation(agent1, agent2, max_turns=6)
 conversation.simulate()

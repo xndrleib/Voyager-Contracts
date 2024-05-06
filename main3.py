@@ -7,33 +7,35 @@ import voyager.utils as U
 
 # Argument parser
 parser = argparse.ArgumentParser(description='Running Voyager with different sets of parameters.')
-parser.add_argument('--port', type=int, default=49172, help='MC port number (default: 49172)')
-# parser.add_argument('--server_port', type=int, default=3000, help='Server port number (default: 3000)')
+parser.add_argument('--port', type=int, required=True, help='MC port number')
+parser.add_argument('--server_port', type=int, default=3000, help='Server port number (default: 3000)')
 args = parser.parse_args()
 
+azure_login = None
 mc_port = args.port
+server_port = args.server_port
+
+model = "gpt-4-turbo"  # "gpt-4-0613" | "gpt-4-turbo" | gpt-3.5-turbo
+
 options = {
-    'azure_login': None,
+    'azure_login': azure_login,
     'mc_port': mc_port,
     'openai_api_key': openai_api_key,
-    # skill_library_dir=skill_library_dir, # Load a learned skill library.
-    # ckpt_dir: ckpt_dir, # Feel free to use a new dir. Do not use the same dir as skill library because new events will still be recorded to ckpt_dir. 
-    'resume': False,  # Do not resume from a skill library because this is not learning.
+    'resume': False,
     'env_wait_ticks': 80,
-    # 'env_request_timeout': 600,
     'action_agent_task_max_retries': 50,
     'action_agent_show_chat_log': True,
     'action_agent_temperature': 0.3,
-    'action_agent_model_name': "gpt-4-0613",  # #"gpt-4-0613",
-    'critic_agent_model_name': "gpt-4-0613",  # "gpt-3.5-turbo", #"gpt-4-0613",
+    'action_agent_model_name': model,
+    'critic_agent_model_name': model
 }
 
 multi_options = {
     'scenario_file': "cleanup.json",
     'continuous': True,
-    'episode_timeout': 120,  # 120,
+    'episode_timeout': 120,
     'num_episodes': 1,
-    'negotiator_model_name': "gpt-4-0613",
+    'negotiator_model_name': model,
     'negotiator_temperature': 0.7,
     'options': options
 }

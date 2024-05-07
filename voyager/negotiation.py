@@ -77,11 +77,12 @@ class Negotiation:
 
         def log_and_print(message, print_flag=True):
             logger.info(message)
-            if print_flag: print(message)
+            if print_flag:
+                print(message)
 
         return log_and_print
 
-    def summarize(self):
+    def summarize(self, model="gpt-3.5-turbo"):
         # Prepare a prompt for the summarization
         summary_prompt = "Summarize the following negotiation: \n\n"
         for name, thought, message in self.conversation_log:
@@ -90,7 +91,7 @@ class Negotiation:
 
         # Generate a summary using the agent 
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=model,
             messages=[{"role": "system", "content": summary_prompt}],
         )
         summary = response['choices'][0]['message']['content'].strip()
@@ -154,7 +155,7 @@ class Negotiation:
             raise Exception("Negotiation failure. No contract was found. Please try again.")
 
         # Summarize the conversation
-        summary = self.summarize()
+        summary = self.summarize(model="gpt-3.5-turbo")
         self.logger(f"Negotiation Summary:\n{summary}\n", print_flag=False)
 
     def get_contract(self):

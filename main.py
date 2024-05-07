@@ -26,7 +26,6 @@ options = {
     'action_agent_model_name': model,
     'critic_agent_model_name': model
 }
-
 contract = """
 1. Gizmo will focus on harvesting red mushroom blocks from the giant mushrooms.
 2. Glitch will focus on managing the waste in the river, ensuring the waste level is 7 or below to allow mushroom blocks to regrow.

@@ -636,62 +636,49 @@ class MultiAgentVoyager:
         elif self.contract_mode == "manual":
             logging.info('Contract is provided manually')
 
-        with open(f"{self.save_dir}/contract.txt", 'w') as contract_file:
-            logging.info(f'Saving the contract to {self.save_dir}/contract.txt...')
+        contract_path = f"{self.save_dir}/contract.txt"
+        with open(contract_path, 'w') as contract_file:
+            logging.info(f'Saving the contract to {contract_path}...')
             contract_file.write(self.contract)
 
-        # set agent tasks and contract
         logging.info('Initializing threads for agents...')
-        self.run_threads(lambda agent_t, _, args: agent_t.reset(task=agent_t.task, **args),
-                         args={
-                             'args': {
-                                 'contract': self.contract,
-                                 'scenario': self.scenario_description,
-                                 'context': "",
-                                 'reset_env': False,
-                             }
-                         },
-                         shared_args=True)
+        self.run_threads(
+            target=lambda agent_t, _, args: agent_t.reset(task=agent_t.task, **args),
+            args={
+                'args': {
+                    'contract': self.contract,
+                    'scenario': self.scenario_description,
+                    'context': "",
+                    'reset_env': False,
+                }
+            },
+            shared_args=True
+        )
         logging.info('Threads initialized.')
 
         replay = False
         done = False
-        while not done or replay:
+
+        while not done:
             if replay:
                 logging.info('Repeating episode...')
                 self.run_episode(episode=self.episode, reload=True, reset='soft')
             else:
-                U.f_mkdir(f"{self.save_dir}/episodes/episode{self.episode}")
+                episode_dir = f"{self.save_dir}/episodes/episode{self.episode}"
+                U.f_mkdir(episode_dir)
 
-                # don't load episode if its already loaded
-                reload = False if self.episode == 0 else True
+                reload = self.episode != 0
                 logging.info(f'Starting episode {self.episode}...')
                 results = self.run_episode(reload=reload, reset='soft')
                 logging.info(f'Episode {self.episode} completed.')
 
-                # If all tasks were successful, stop
-                # agent_successes = [result['info']['success'] for result in results.values()]
-                # success = all(agent_successes)
-
-                # # stop episode from ending
-                # success = False
-
-                # Print successes
                 for agent in self.agents:
-                    logging.info(f"{agent.username} has {results[agent.username]['info']['emeralds']} emeralds.")
+                    emeralds = results[agent.username]['info']['emeralds']
+                    logging.info(f"{agent.username} has {emeralds} emeralds.")
 
-                # save emerald values
-                U.json_dump({agent.username: results[agent.username]['info']['emeralds'] for agent in self.agents},
-                            f"{self.save_dir}/episodes/episode{self.episode}/emeralds.json")
+                emeralds_data = {agent.username: results[agent.username]['info']['emeralds'] for agent in self.agents}
+                U.json_dump(emeralds_data, f"{episode_dir}/emeralds.json")
 
-                # if success:
-                #     user_response = input("Episode success. Press enter to close or 'r' to repeat...")
-                #     if user_response == 'r': 
-                #         replay = True
-                #     else: 
-                #         break
-
-            # if not continuous mode wait to continue
             if self.continuous:
                 self.episode += 1
                 logging.info(f'Episode {self.episode} completed, moving to next episode.')
@@ -705,7 +692,7 @@ class MultiAgentVoyager:
                     logging.info('User chose to repeat the episode.')
                 else:
                     replay = False
-                    self.episode += 1  # only increment if not replaying
+                    self.episode += 1
                     logging.info(f'User chose to continue. Preparing episode {self.episode}.')
 
         logging.info('Simulation completed. Exiting...')

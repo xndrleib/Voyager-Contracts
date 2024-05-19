@@ -1,3 +1,5 @@
+import logging
+
 from .json_utils import *
 
 
@@ -28,7 +30,7 @@ def add_block_commands(block_positions):
 
 def chest_commands(block_positions, chest_contents):
     if 'chest' not in block_positions:
-        print('Warning: No chest found in scenario')
+        logging.warning('Warning: No chest found in scenario')
         return ""
 
     chest_pos = block_positions['chest'][0]

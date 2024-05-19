@@ -5,7 +5,8 @@ from voyager.prompts import load_prompt
 
 
 class Negotiator:
-    def __init__(self, name, task, other_name, other_task, scenario, model="gpt-3.5-turbo", temperature=0.1):
+    def __init__(self, name, task, other_name, other_task, scenario, model="gpt-3.5-turbo", temperature=0.1,
+                 context=''):
         self.name = name
         self.task = task
         self.other_name = other_name
@@ -13,13 +14,15 @@ class Negotiator:
         self.scenario = scenario
         self.model = model
         self.temperature = temperature
+        self.context = context
 
         openai.api_key = openai_api_key
 
         # Including both tasks in the system prompt
         system_prompt = load_prompt("negotiator")
         self.system_prompt = (f"Your name is {name}\n\nYour Task: {task}\n\nOther Agent's Name: {other_name}\n\n"
-                              f"Other Agent's Task: {other_task}\n\nScenario: {scenario}\n\n{system_prompt}")
+                              f"Other Agent's Task: {other_task}\n\nScenario: {scenario}\n\nContext: {context}\n\n"
+                              f"{system_prompt}")
 
         self.reset()
 
@@ -124,7 +127,8 @@ class Negotiation:
             raise Exception("Conversation has already been simulated. Use display() to see the conversation. Or use "
                             "reset() to start a new conversation.")
 
-        accept = False
+        accept_flag = False
+        continue_flag = False
         for turn in range(self.max_turns):
             if turn == 0:
                 thought, message = self.agent1.generate_message()
@@ -141,18 +145,27 @@ class Negotiation:
 
             # if a player accepts the contract, end the conversation
             if '[accept]' in message:
-                accept = True
+                accept_flag = True
+                break
+
+            # if a player signals to continue without agreement, end the conversation
+            if '[continue]' in message:
+                continue_flag = True
+                self.logger(f"Negotiation ended by mutual agreement to continue without contract after {turn + 1} "
+                            f"iterations.", print_flag=False)
                 break
 
         # Extract the contract from the conversation log
-        if accept:
+        if accept_flag:
             try:
                 self.contract = self.conversation_log[-2][2].split('[contract]')[1].split('[contract end]')[0].strip()
             except IndexError:
                 raise Exception("Negotiation failure. Contract accepted but no contract was found. Please try again.")
             self.logger(f"Contract:\n{self.contract}\n")
+        elif continue_flag:
+            self.contract = ''
         else:
-            raise Exception("Negotiation failure. No contract was found. Please try again.")
+            raise Exception("Negotiation failure. Please try again.")
 
         # Summarize the conversation
         summary = self.summarize(model="gpt-3.5-turbo")

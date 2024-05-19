@@ -1,0 +1,25 @@
+{
+  "description": "The environment doesn't matter. The only possible operation is trading with other players.",
+  "secret_description": "This is a test scenario for checking how bots swap items",
+  "tasks": {
+    "Gizmo": "Collect items for Enchantment Table creation",
+    "Glitch": "Collect items for Enchantment Table creation"
+  },
+  "center_position": {
+    "x": 323,
+    "y": 119,
+    "z": 110
+  },
+  "spawn_locations": {
+    "Gizmo": {
+      "x": 337,
+      "y": 119,
+      "z": 111
+    },
+    "Glitch": {
+      "x": 338,
+      "y": 119,
+      "z": 115
+    }
+  }
+}

@@ -40,11 +40,6 @@ def remove_drops_commands():
 
 
 def remove_blocks_commands(block_types, center_position):
-    # x, y, z = center_position['x'], center_position['y'], center_position['z']
-    # commands = []
-    # for block_type in block_types:
-    #     commands.append(f"bot.chat('/fill {str(x-16)} {str(y-16)} {str(z-16)} {str(x+16)} {str(y+16)} {str(z+16)} air replace {block_type}');")
-    # return ''.join(commands)
     return f"await clearBlocks(bot, {json_dumps(block_types)}, {json_dumps(center_position)});"
 
 

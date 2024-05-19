@@ -248,15 +248,13 @@ class MultiAgentVoyager:
         self.judge.close()
 
     def load_scenario(self, reset='soft'):
-
-        # set file_name
-        file_name = "scenarios/" + self.scenario_file
-
         try:
+            file_name = "scenarios/" + self.scenario_file
             json_contents = U.json_load(file_name)
-            print(f'Loading {self.scenario_file}...')
+            logging.info(f'Loading scenario file: {self.scenario_file}...')
         except FileNotFoundError:
-            raise 'No scenario file found'
+            logging.error(f'No scenario file found: {self.scenario_file}')
+            raise FileNotFoundError('No scenario file found')
 
         self.scenario_description = json_contents['description']
         tasks = json_contents['tasks']
@@ -269,30 +267,35 @@ class MultiAgentVoyager:
         scenario_block_types.remove('facing')
         self.chest_memory = {}
 
-        # set agent tasks
+        logging.info('Scenario description and details loaded.')
+
         for i, agent in enumerate(self.agents):
             agent.task = tasks[agent.username]
+            logging.info(f'Set task for agent {agent.username}: {agent.task}')
 
-        # set judge task to all agents tasks
         self.judge.task = tasks
+        logging.info('Set judge tasks.')
 
-        # if .js with same filename exists, load it
-        if U.f_exists(file_name.replace('.json', '.js')):
-            self.scenario_code = U.load_text(file_name.replace('.json', '.js'))
+        js_file = file_name.replace('.json', '.js')
+        if U.f_exists(js_file):
+            self.scenario_code = U.load_text(js_file)
+            logging.info(f'Loaded scenario code from: {js_file}')
         else:
-            print('Warning: No scenario code file found')
+            logging.warning(f'No scenario code file found for: {js_file}')
 
-        # clear inventory for both agents
         if len(self.agents) == 0:
-            raise 'At least one agent must be initialized to load scenario'
+            logging.error('At least one agent must be initialized to load scenario')
+            raise ValueError('At least one agent must be initialized to load scenario')
+
         self.reset_agents(mode='hard')
+        logging.info('Agents reset.')
 
         x, y, z = center_position['x'], center_position['y'], center_position['z']
 
-        # spawn bots, replace blocks, and fill chest
+        logging.info('Setting up environment...')
         self.judge.env.step(
             f"bot.chat('/gamemode spectator {self.judge_username}');"
-            + f"bot.chat('/tp {self.judge_username} {x} {y + 20} {z}');"  # move this into a helper?
+            + f"bot.chat('/tp {self.judge_username} {x} {y + 20} {z}');"
             + f"bot.chat('/gamerule randomTickSpeed 3');"
             + f"bot.chat('/gamerule spawnRadius 0');"
             + U.remove_drops_commands()
@@ -302,11 +305,11 @@ class MultiAgentVoyager:
             + U.chest_commands(block_positions, chest_contents),
             programs=self.judge.skill_manager.programs,
         )
-        # events[-1][1]["inventory"] = new_events[-1][1]["inventory"]
-        # events[-1][1]["voxels"] = new_events[-1][1]["voxels"]
+        logging.info('Environment setup complete.')
 
         if self.scenario_code is not None:
             self.judge.env.step(self.scenario_code)
+            logging.info('Executed scenario code.')
 
     # update a global chest memory to keep consistent across agents
     def update_chest_memory(self, chests):

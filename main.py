@@ -12,7 +12,7 @@ azure_login = None
 mc_port = args.port
 server_port = args.server_port
 
-model = "gpt-3.5-turbo"  # "gpt-4-0613" | "gpt-4-turbo" | gpt-3.5-turbo
+model = "gpt-4o"  # "gpt-3.5-turbo" | "gpt-4" | "gpt-4-turbo" | "gpt-4o"
 
 options = {
     'azure_login': azure_login,
@@ -48,7 +48,7 @@ contract = """
 multi_agent = MultiAgentVoyager(
     server_port=server_port,
     num_agents=2,
-    scenario_file="cleanup.json",
+    scenario_file="trading_cleanup.json",
     critic_mode="auto",
     contract_mode="manual",
     contract=contract,

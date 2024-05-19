@@ -15,7 +15,7 @@ azure_login = None
 mc_port = args.port
 server_port = args.server_port
 
-model = "gpt-4-turbo"  # "gpt-4-0613" | "gpt-4-turbo" | gpt-3.5-turbo
+model = "gpt-4o"  # "gpt-3.5-turbo" | "gpt-4" | "gpt-4-turbo" | "gpt-4o"
 
 options = {
     'azure_login': azure_login,

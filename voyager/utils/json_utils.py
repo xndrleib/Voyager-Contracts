@@ -171,6 +171,10 @@ def fix_and_parse_json(
     json_str: str, try_to_fix_with_gpt: bool = True
 ) -> Union[str, Dict[Any, Any]]:
     """Fix and parse JSON string"""
+
+    if json_str.startswith('```json') and json_str.endswith('```'):
+        json_str = json_str[7:-3].strip()
+
     try:
         json_str = json_str.replace("\t", "")
         return json.loads(json_str)

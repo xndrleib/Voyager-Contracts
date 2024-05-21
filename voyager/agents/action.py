@@ -13,17 +13,17 @@ from voyager.control_primitives_context import load_control_primitives_context
 
 class ActionAgent:
     def __init__(
-        self,
-        model_name="gpt-3.5-turbo",
-        temperature=0,
-        request_timout=120,
-        episode_timeout=120,
-        ckpt_dir="ckpt",
-        resume=False,
-        chat_log=True,
-        execution_error=True,
-        logger=None,
-        username="Voyager",
+            self,
+            model_name="gpt-3.5-turbo",
+            temperature=0,
+            request_timout=120,
+            episode_timeout=120,
+            ckpt_dir="ckpt",
+            resume=False,
+            chat_log=True,
+            execution_error=True,
+            logger=None,
+            username="Voyager",
     ):
         self.ckpt_dir = ckpt_dir
         self.chat_log = chat_log
@@ -107,14 +107,25 @@ class ActionAgent:
         assert isinstance(system_message, SystemMessage)
         return system_message
 
-    def render_human_message(
-        self, *, events, code="", task="", contract="", scenario="", context="", critique="", contract_critique=""
-    ):
+    def extract_event_data(self, events):
         chat_messages = []
         error_messages = []
-        # FIXME: damage_messages is not used
         damage_messages = []
+
+        biome = None
+        time_of_day = None
+        voxels = []
+        entities = {}
+        health = None
+        hunger = None
+        position = {}
+        equipment = []
+        inventory_used = 0
+        inventory = []
+        username = ""
+
         assert events[-1][0] == "observe", "Last event must be observe"
+
         for i, (event_type, event) in enumerate(events):
             if event_type == "onChat":
                 chat_messages.append(event["onChat"])
@@ -136,85 +147,159 @@ class ActionAgent:
                 username = event["status"]["name"]
                 assert i == len(events) - 1, "observe must be the last event"
 
+        return {
+            "chat_messages": chat_messages,
+            "error_messages": error_messages,
+            "damage_messages": damage_messages,
+            "biome": biome,
+            "time_of_day": time_of_day,
+            "voxels": voxels,
+            "entities": entities,
+            "health": health,
+            "hunger": hunger,
+            "position": position,
+            "equipment": equipment,
+            "inventory_used": inventory_used,
+            "inventory": inventory,
+            "username": username
+        }
+
+    def create_observation_string(self, event_data, features=None, **kwargs):
+        if features is None:
+            features = [
+                "code", "error", "chat", "biome", "time", "voxels", "entities",
+                "health", "hunger", "position", "inventory", "chest_observation",
+                "username", "scenario", "task", "contract", "context", "critique",
+                "contract_critique"
+            ]
+
+        chat_messages = event_data["chat_messages"]
+        error_messages = event_data["error_messages"]
+        biome = event_data["biome"]
+        time_of_day = event_data["time_of_day"]
+        voxels = event_data["voxels"]
+        entities = event_data["entities"]
+        health = event_data["health"]
+        hunger = event_data["hunger"]
+        position = event_data["position"]
+        inventory_used = event_data["inventory_used"]
+        inventory = event_data["inventory"]
+        username = event_data["username"]
+
         observation = ""
 
-        if code:
-            observation += f"Code from the last round:\n{code}\n\n"
-        else:
-            observation += f"Code from the last round: No code in the first round\n\n"
+        if "code" in features:
+            code = kwargs.get("code", "")
+            if code:
+                observation += f"Code from the last round:\n{code}\n\n"
+            else:
+                observation += f"Code from the last round: No code in the first round\n\n"
 
-        if self.execution_error:
+        if "error" in features and self.execution_error:
             if error_messages:
                 error = "\n".join(error_messages)
                 observation += f"Execution error:\n{error}\n\n"
             else:
                 observation += f"Execution error: No error\n\n"
 
-        if self.chat_log:
+        if "chat" in features and self.chat_log:
             if chat_messages:
                 chat_log = "\n".join(chat_messages)
                 observation += f"Chat log: {chat_log}\n\n"
             else:
                 observation += f"Chat log: None\n\n"
 
-        observation += f"Biome: {biome}\n\n"
+        if "biome" in features:
+            observation += f"Biome: {biome}\n\n"
 
-        observation += f"Time: {time_of_day}\n\n"
+        if "time" in features:
+            observation += f"Time: {time_of_day}\n\n"
 
-        if voxels:
-            observation += f"Nearby blocks: {', '.join(voxels)}\n\n"
-        else:
-            observation += f"Nearby blocks: None\n\n"
+        if "voxels" in features:
+            if voxels:
+                observation += f"Nearby blocks: {', '.join(voxels)}\n\n"
+            else:
+                observation += f"Nearby blocks: None\n\n"
 
-        if entities:
-            nearby_entities = [
-                k for k, v in sorted(entities.items(), key=lambda x: x[1])
-            ]
-            observation += f"Nearby entities (nearest to farthest): {', '.join(nearby_entities)}\n\n"
-        else:
-            observation += f"Nearby entities (nearest to farthest): None\n\n"
+        if "entities" in features:
+            if entities:
+                nearby_entities = [
+                    k for k, v in sorted(entities.items(), key=lambda x: x[1])
+                ]
+                observation += f"Nearby entities (nearest to farthest): {', '.join(nearby_entities)}\n\n"
+            else:
+                observation += f"Nearby entities (nearest to farthest): None\n\n"
 
-        observation += f"Health: {health:.1f}/20\n\n"
+        if "health" in features:
+            observation += f"Health: {health:.1f}/20\n\n"
 
-        observation += f"Hunger: {hunger:.1f}/20\n\n"
+        if "hunger" in features:
+            observation += f"Hunger: {hunger:.1f}/20\n\n"
 
-        observation += f"Position: x={position['x']:.1f}, y={position['y']:.1f}, z={position['z']:.1f}\n\n"
+        if "position" in features:
+            observation += f"Position: x={position['x']:.1f}, y={position['y']:.1f}, z={position['z']:.1f}\n\n"
 
-        # observation += f"Equipment: {equipment}\n\n"
+        if "inventory" in features:
+            if inventory:
+                observation += f"Inventory ({inventory_used}/36): {inventory}\n\n"
+            else:
+                observation += f"Inventory ({inventory_used}/36): Empty\n\n"
 
-        if inventory:
-            observation += f"Inventory ({inventory_used}/36): {inventory}\n\n"
-        else:
-            observation += f"Inventory ({inventory_used}/36): Empty\n\n"
-
-        if not (
-            task == "Place and deposit useless items into a chest"
-            or task.startswith("Deposit useless items into the chest at")
+        if "chest_observation" in features and not (
+                kwargs.get("task", "") == "Place and deposit useless items into a chest"
+                or kwargs.get("task", "").startswith("Deposit useless items into the chest at")
         ):
             observation += self.render_chest_observation()
 
-        observation += f"Username: You are {username}\n\n"
+        if "username" in features:
+            observation += f"Username: You are {username}\n\n"
 
-        observation += f"Scenario: {scenario}\n\n"
+        if "scenario" in features:
+            observation += f"Scenario: {kwargs.get('scenario', '')}\n\n"
 
-        observation += f"Task: {task}\n\n"
+        if "task" in features:
+            observation += f"Task: {kwargs.get('task', '')}\n\n"
 
-        observation += f"Contract: {contract}\n\n"
+        if "contract" in features:
+            observation += f"Contract: {kwargs.get('contract', '')}\n\n"
 
-        if context:
-            observation += f"Context: {context}\n\n"
-        else:
-            observation += f"Context: None\n\n"
+        if "context" in features:
+            context = kwargs.get("context", "")
+            if context:
+                observation += f"Context: {context}\n\n"
+            else:
+                observation += f"Context: None\n\n"
 
-        if critique:
-            observation += f"Task Critique: {critique}\n\n"
-        else:
-            observation += f"Task Critique: None\n\n"
+        if "critique" in features:
+            critique = kwargs.get("critique", "")
+            if critique:
+                observation += f"Task Critique: {critique}\n\n"
+            else:
+                observation += f"Task Critique: None\n\n"
 
-        if contract_critique:
-            observation += f"Contract Critique: {contract_critique}\n\n"
-        else:
-            observation += f"Contract Critique: None\n\n"
+        if "contract_critique" in features:
+            contract_critique = kwargs.get("contract_critique", "")
+            if contract_critique:
+                observation += f"Contract Critique: {contract_critique}\n\n"
+            else:
+                observation += f"Contract Critique: None\n\n"
+
+        return observation
+
+    def render_human_message(
+            self, *, events, code="", task="", contract="", scenario="", context="", critique="", contract_critique=""
+    ):
+        event_data = self.extract_event_data(events)
+
+        observation = self.create_observation_string(
+            event_data=event_data, features=[
+                "code", "error", "chat", "biome", "time", "voxels", "entities",
+                "health", "hunger", "position", "inventory", "chest_observation",
+                "username", "scenario", "task", "contract", "context",
+                "critique", "contract_critique"
+            ], code=code, task=task, contract=contract, scenario=scenario, context=context, critique=critique,
+            contract_critique=contract_critique
+        )
 
         return HumanMessage(content=observation)
 
@@ -249,21 +334,23 @@ class ActionAgent:
                             "params": list(node["params"]),
                         }
                     )
-                # find the last async function
-                main_function = None
-                for function in reversed(functions):
+
+                # Filter functions that match the criteria
+                candidate_functions = []
+
+                for function in functions:
                     if function["type"] == "AsyncFunctionDeclaration":
-                        main_function = function
-                        break
-                assert (
-                    main_function is not None
-                ), "No async function found. Your main function must be async."
-                assert (
-                    len(main_function["params"]) == 1
-                    and main_function["params"][0].name == "bot"
-                ), f"Main function {main_function['name']} must take a single argument named 'bot'"
+                        if len(function["params"]) == 1 and function["params"][0].name == "bot":
+                            candidate_functions.append(function)
+
+                assert len(candidate_functions) == 1, (
+                    f"Expected exactly one main function with a single 'bot' parameter, "
+                    f"found {len(candidate_functions)}:\n{candidate_functions}"
+                )
+
+                main_function = candidate_functions[0]
+
                 program_code = "\n\n".join(function["body"] for function in functions)
-                # exec_code = f"await {main_function['name']}(bot);"
 
                 exec_code = f"""
 const result = await Promise.race([
@@ -282,7 +369,6 @@ if (result === 'Timeout reached') {{
             except Exception as e:
                 retry -= 1
                 error = e
-                time.sleep(1)
         return f"Error parsing action response (before program execution): {error}"
 
     def summarize_chatlog(self, events):

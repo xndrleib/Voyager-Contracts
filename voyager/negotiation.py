@@ -21,8 +21,12 @@ class Negotiator:
         # Including both tasks in the system prompt
         system_prompt = load_prompt("negotiator")
         self.system_prompt = (f"Your name is {name}\n\nYour Task: {task}\n\nOther Agent's Name: {other_name}\n\n"
-                              f"Other Agent's Task: {other_task}\n\nScenario: {scenario}\n\nContext: {context}\n\n"
-                              f"{system_prompt}")
+                              f"Other Agent's Task: {other_task}\n\nScenario: {scenario}\n\n")
+
+        if context:
+            self.system_prompt += f'{context}\n\n'
+
+        self.system_prompt += f"{system_prompt}"
 
         self.reset()
 
@@ -57,6 +61,8 @@ class Negotiation:
         self.save_dir = save_dir
         self.reset()
         self.logger = self.setup_custom_logger()
+
+        # todo: keep track of all messages
 
     def reset(self):
         self.conversation_log = []
@@ -130,6 +136,7 @@ class Negotiation:
         accept_flag = False
         continue_flag = False
         for turn in range(self.max_turns):
+            # todo: use not only the last message for prompt
             if turn == 0:
                 thought, message = self.agent1.generate_message()
                 self.conversation_log.append((self.agent1.name, thought, message))
@@ -170,6 +177,8 @@ class Negotiation:
         # Summarize the conversation
         summary = self.summarize(model="gpt-3.5-turbo")
         self.logger(f"Negotiation Summary:\n{summary}\n", print_flag=False)
+
+        return self.conversation_log
 
     def get_contract(self):
         if self.contract is None:

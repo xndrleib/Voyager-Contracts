@@ -2,7 +2,7 @@ const fs = require('fs');
 
 async function runCleanupScenario(bot) {
 
-    bot.chat("starting cleanup scenario...");
+    bot.chat("Starting Cleanup Scenario...");
 
     const waste_cutoff = 7;
     const reward_respawn_rate = 0.05;

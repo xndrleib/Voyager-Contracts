@@ -15,7 +15,9 @@ server_port = args.server_port
 
 model = "gpt-4o"  # "gpt-3.5-turbo" | "gpt-4" | "gpt-4-turbo" | "gpt-4o"
 
+scenario_file = 'cleanup.json'  # 'cleanup.json' | 'swapping.json'
 contract = contract_examples.contract_cleanup1
+num_episodes = 2
 
 options = {
     'azure_login': azure_login,
@@ -34,13 +36,13 @@ options = {
 multi_agent = MultiAgentVoyager(
     server_port=server_port,
     num_agents=2,
-    scenario_file="swapping.json",
+    scenario_file=scenario_file,
     critic_mode="auto",
     contract_mode="manual",
     contract=contract,
     continuous=True,
-    episode_timeout=120,
-    num_episodes=1,
+    episode_timeout=90,
+    num_episodes=num_episodes,
     negotiator_model_name=model,
     negotiator_temperature=0.7,
     options=options

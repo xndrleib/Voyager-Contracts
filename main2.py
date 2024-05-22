@@ -1,3 +1,5 @@
+# Running MultiVoyager with negotiation
+
 import argparse
 from voyager import MultiAgentVoyager
 import time
@@ -18,6 +20,12 @@ server_port = args.server_port
 
 model = "gpt-4o"  # "gpt-3.5-turbo" | "gpt-4" | "gpt-4-turbo" | "gpt-4o"
 
+scenario_file = 'cleanup.json'  # 'cleanup.json' | 'swapping.json'
+n_plays = 1
+n_episodes = 1
+n_contracts = 10
+n_negotiation_tries = 3
+
 options = {
     'azure_login': azure_login,
     'mc_port': mc_port,
@@ -32,18 +40,14 @@ options = {
 }
 
 multi_options = {
-    'scenario_file': "cleanup.json",
+    'scenario_file': scenario_file,
     'continuous': True,
     'episode_timeout': 120,
-    'num_episodes': 1,
+    'num_episodes': n_episodes,
     'negotiator_model_name': model,
     'negotiator_temperature': 0.7,
     'options': options
 }
-
-n_games = 1
-n_contracts = 10
-n_negotiation_tries = 3
 
 start_time = time.time()
 
@@ -70,7 +74,7 @@ for contract_i in range(1, n_contracts+1):
     contract = contract_env.contract
     contract_env.close()
 
-    for game in range(n_games):
+    for game in range(n_plays):
         multi_agent = MultiAgentVoyager(
             **multi_options,
             contract_mode="manual",

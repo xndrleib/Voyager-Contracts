@@ -696,3 +696,17 @@ class MultiAgentVoyager:
         _ = requests.post(f"{server}/stop")
         for agent in self.agents + [self.judge]:
             agent.env.mineflayer.stop()
+
+    def get_inventories(self):
+        inventories = {}
+        for agent in self.agents:
+            inventory = agent.get_inventory()
+            inventories[agent.username] = inventory
+        return inventories
+
+    def format_inventories_context(self, inventories):
+        context_lines = ["Inventories of the agents:"]
+        for username, inventory in inventories.items():
+            inventory_str = ", ".join([f"{item['count']}x {item['name']}" for item in inventory])
+            context_lines.append(f"{username}: {inventory_str}")
+        return "\n".join(context_lines)

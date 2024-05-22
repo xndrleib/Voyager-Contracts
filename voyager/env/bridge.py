@@ -228,3 +228,23 @@ class VoyagerEnv(gym.Env):
                 else:
                     print(result.json())
         return self.server_paused
+
+    def get_inventory(self):
+        result = self.send_request(f"{self.server}/inventory")
+        if result is None:
+            raise RuntimeError("Failed to get a valid response from the Minecraft server")
+        return result.json()['inventory']
+
+    def get_observations(self):
+        result = self.send_request(f"{self.server}/observe")
+        if result is None:
+            raise RuntimeError("Failed to get a valid response from the Minecraft server")
+        returned_data = result.json()
+        return json.loads(returned_data)
+
+    def give_item(self, item, target, count=1):
+        data = {"item": item, "target": target, "count": count}
+        result = self.send_request(f"{self.server}/give-item", json_data=data)
+        if result is None:
+            raise RuntimeError("Failed to give item to the bot")
+        return result.json()

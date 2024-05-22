@@ -50,7 +50,7 @@ app.post("/start", (req, res) => {
         bot.dismount();
     });
 
-    // chat lisener to record other bots messages
+    // chat listener to record other bots messages
     bot.on('chat', (username, message) => {
                 
         // Emitting a custom event to record the message
@@ -405,6 +405,39 @@ app.post("/step", async (req, res) => {
         }
         return err.message;
     }
+});
+
+app.post("/inventory", (req, res) => {
+    if (!bot) {
+        res.status(400).json({ error: "Bot not spawned" });
+        return;
+    }
+    const inventory = bot.inventory.items().map(item => ({
+        name: item.name,
+        count: item.count,
+        slot: item.slot
+    }));
+    res.json({ inventory });
+});
+
+app.post("/give-item", (req, res) => {
+    if (!bot) {
+        res.status(400).json({ error: "Bot not spawned" });
+        return;
+    }
+    const target = req.body.target;
+    const item = req.body.item;
+    const count = req.body.count || 1;
+    bot.chat(`/give ${target} minecraft:${item} ${count}`);
+    res.json({ message: `Given ${count} ${item}(s) to ${target}` });
+});
+
+app.post("/observe", (req, res) => {
+    if (!bot) {
+        res.status(400).json({ error: "Bot not spawned" });
+        return;
+    }
+    res.json(bot.observe());
 });
 
 app.post("/stop", (req, res) => {

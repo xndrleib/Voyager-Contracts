@@ -3,6 +3,7 @@ import threading
 import time
 from datetime import datetime
 from collections import defaultdict
+import random
 
 import requests
 from pprint import pformat
@@ -608,35 +609,52 @@ class MultiAgentVoyager:
 
                 if conversation_log:
                     if agent_name:
-                        # todo: remove thoughts of other players
-                        conversation_log = ''
+                        conversation_log = conversation_log[agent_name]
+                    else:
+                        # todo: Here should be log containing thoughts and messages for all the agents
+                        raise NotImplementedError
+                else:
+                    logging.warning('conversation_log is empty')
+                    conversation_log = 'Logs are not given'
 
                 if contract_critique:
                     for agent, agent_critic in contract_critique.items():
                         if agent_critic['critique'] == "":
                             agent_critic['critique'] = "No critic is given"
                     if agent_name:
-                        task_critique = f'Task critique from the judge: {contract_critique[agent_name]["critique"]}\n'
+                        task_critique = f'Task Critique from the Judge:\n{contract_critique[agent_name]["critique"]}\n'
                     else:
-                        task_critique = '\n'.join([f'Task critique from the judge for {agent.username}: '
+                        task_critique = '\n'.join([f'Task Critique from the Judge for {agent.username}: '
                                                    f'{contract_critique[agent.username]["critique"]}'
                                                    for agent in self.agents])
 
-                    contract_critique = '\n'.join([f'Contract critique from the judge for {agent.username}: '
+                    contract_critique_str = '\n'.join([f'Contract Critique from the Judge for {agent.username}: '
                                                    f'{contract_critique[self.judge_username]["critique"][agent.username]}'
                                                    for agent in self.agents])
+
+                    # todo: replace with exact value, not the one from the judge's answer
+                    total_emeralds = str(sum(list(contract_critique[self.judge_username]['emeralds'].values())))
+
+                    emeralds_distribution = f"Judge's decision on final distribution of {total_emeralds} emeralds:\n"
+
+                    for agent in self.agents:
+                        emeralds_distribution += \
+                            (f'{agent.username} '
+                             f'gets {contract_critique[self.judge_username]["emeralds"][agent.username]} emeralds\n')
 
                 episode_string = (f"Episode {ep_num + 1}:\n"
                                   f"Negotiations Log:\n{conversation_log}\n"
                                   f"Contract:\n{contract}\n"
-                                  f"Contract Critique:\n{contract_critique}\n"
-                                  f"Task Critique:\n{task_critique}\n")
+                                  f"Contract Critique:\n{contract_critique_str}\n"
+                                  f"{task_critique}\n"
+                                  f"{emeralds_distribution}\n")
+
                 return episode_string
 
             for agent in self.agents:
                 username = agent.username
                 negotiation_context[username] = 'Negotiation History\n'
-                negotiation_context[username] += '/n'.join([create_episode_string(ep_num, agent_name=username)
+                negotiation_context[username] += '\n'.join([create_episode_string(ep_num, agent_name=username)
                                                            for ep_num in range(self.episode + 1)])
 
             self.negotiate_contract(context=negotiation_context, episode=self.episode + 1)
@@ -670,8 +688,11 @@ class MultiAgentVoyager:
         if self.scenario_description is None:
             raise ValueError("Scenario must be loaded before negotiating contract")
 
-        agent1 = self.agents[0]
-        agent2 = self.agents[1]
+        rand_int1 = random.randint(0, 1)
+        rand_int2 = 1 - rand_int1
+
+        agent1 = self.agents[rand_int1]
+        agent2 = self.agents[rand_int2]
 
         if context is None:
             context = defaultdict(str)
@@ -701,12 +722,14 @@ class MultiAgentVoyager:
             context=context[agent2.username],
         )
 
-        # hold a negotiation between players, where negotiator1 starts first
         negotiation = Negotiation(negotiator1, negotiator2, max_turns=max_turns, save_dir=self.save_dir)
-        conversation_log = negotiation.simulate()
+        negotiation.simulate()
         self.contract = negotiation.get_contract()
 
-        self.negotiations_history[f'ep{episode}']['conversation_log'] = conversation_log
+        self.negotiations_history[f'ep{episode}']['conversation_log'] = {}
+        self.negotiations_history[f'ep{episode}']['conversation_log'][negotiator1.name] = negotiator1.prepare_conversation_string()
+        self.negotiations_history[f'ep{episode}']['conversation_log'][negotiator2.name] = negotiator2.prepare_conversation_string()
+
         self.negotiations_history[f'ep{episode}']['contract'] = self.contract
 
     def run(self):
@@ -727,7 +750,7 @@ class MultiAgentVoyager:
         elif self.contract_mode == "manual":
             logging.info('Contract is provided manually')
             self.negotiations_history[f'ep{self.episode}']['contract'] = self.contract
-            self.negotiations_history[f'ep{self.episode}']['conversation_log'] = 'Logs are not given'
+            self.negotiations_history[f'ep{self.episode}']['conversation_log'] = ''
 
         contract_path = f"{self.save_dir}/contract.txt"
         with open(contract_path, 'w') as contract_file:

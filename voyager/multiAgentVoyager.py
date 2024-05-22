@@ -2,6 +2,7 @@ import copy
 import threading
 import time
 from datetime import datetime
+from collections import defaultdict
 
 import requests
 from pprint import pformat
@@ -36,6 +37,7 @@ class MultiAgentVoyager:
         self.continuous = continuous
         self.contract_mode = contract_mode
         self.contract = contract
+        self.negotiations_history = {}
         self.agents = []
         self.judge = None
         self.usernames = usernames
@@ -46,6 +48,7 @@ class MultiAgentVoyager:
         self.skinurls = skinurls
         self.chest_memory = {}
         self.episode = 0
+        self.events_history = {}
         self.load_from_save = False
         self.reward_item_names = None
 
@@ -255,12 +258,15 @@ class MultiAgentVoyager:
         self.scenario_description = json_contents['description']
         tasks = json_contents['tasks']
         center_position = json_contents['center_position']
-        block_positions = json_contents['block_positions']
         spawn_locations = json_contents['spawn_locations']
-        chest_contents = U.parse_chest_contents(json_contents['chest_contents'])
-        self.reward_item_names = json_contents['reward_item_names']
+        self.reward_item_names = json_contents.get('reward_item_names', [])
+
+        # Check for optional fields
+        block_positions = json_contents.get('block_positions', {})
+        chest_contents = U.parse_chest_contents(json_contents.get('chest_contents', {}))
         scenario_block_types = list(block_positions.keys())
-        scenario_block_types.remove('facing')
+        if 'facing' in scenario_block_types:
+            scenario_block_types.remove('facing')
         self.chest_memory = {}
 
         logging.info('Scenario description and details loaded.')
@@ -277,6 +283,7 @@ class MultiAgentVoyager:
             self.scenario_code = U.load_text(js_file)
             logging.info(f'Loaded scenario code from: {js_file}')
         else:
+            self.scenario_code = None
             logging.warning(f'No scenario code file found for: {js_file}')
 
         if len(self.agents) == 0:
@@ -289,18 +296,23 @@ class MultiAgentVoyager:
         x, y, z = center_position['x'], center_position['y'], center_position['z']
 
         logging.info('Setting up environment...')
-        self.judge.env.step(
-            f"bot.chat('/gamemode spectator {self.judge_username}');"
-            + f"bot.chat('/tp {self.judge_username} {x} {y + 20} {z}');"
-            + f"bot.chat('/gamerule randomTickSpeed 3');"
-            + f"bot.chat('/gamerule spawnRadius 0');"
-            + U.remove_drops_commands()
-            + (U.remove_blocks_commands(scenario_block_types, center_position) if reset == 'hard' else '')
-            + U.spawn_commands(self.usernames, spawn_locations)
-            + U.add_block_commands(block_positions)
-            + U.chest_commands(block_positions, chest_contents),
-            programs=self.judge.skill_manager.programs,
+        setup_commands = (
+                f"bot.chat('/gamemode spectator {self.judge_username}');"
+                f"bot.chat('/tp {self.judge_username} {x} {y} {z}');"
+                f"bot.chat('/gamerule randomTickSpeed 3');"
+                f"bot.chat('/gamerule spawnRadius 0');"
+                + U.remove_drops_commands()
+                + (U.remove_blocks_commands(scenario_block_types, center_position) if reset == 'hard' else '')
+                + U.spawn_commands(self.usernames, spawn_locations)
         )
+
+        if block_positions:
+            setup_commands += U.add_block_commands(block_positions)
+
+        if chest_contents:
+            setup_commands += U.chest_commands(block_positions, chest_contents)
+
+        self.judge.env.step(code=setup_commands, programs=self.judge.skill_manager.programs)
         logging.info('Environment setup complete.')
 
         if self.scenario_code:
@@ -439,14 +451,22 @@ class MultiAgentVoyager:
                 logging.error(f"Invalid parsed result type for {agent.username}:\n{parsed_result}")
                 agent.recorder.record([], agent.task)
 
-            code = parsed_result["program_code"] + "\n" + parsed_result["exec_code"]
+            parsed_code = parsed_result["program_code"] + "\n" + parsed_result["exec_code"]
+
+            code = ''
+            if self.reward_item_names:
+                logging.debug(f"Rewards item names are specified: {self.reward_item_names}")
+                code += (f"await saveRewards(bot, {U.json_dumps(self.reward_item_names)}, "
+                         + f"'{self.save_dir}/episodes/episode{self.episode}');")
+            code += parsed_code
+
+            logging.debug(f"Step with code: {code}")
+
             events_ar = agent.env.step(
-                f"await saveRewards(bot, {U.json_dumps(self.reward_item_names)}, "
-                + f"'{self.save_dir}/episodes/episode{self.episode}');"
-                + code,
+                code=code,
                 programs=agent.skill_manager.programs,
             )
-            agent.recorder.record(events_ar, agent.task)  # what is this for??
+            agent.recorder.record(events_ar, agent.task)
             self.update_chest_memory(events_ar[-1][1]["nearbyChests"])
             result.update({'events': events_ar})
 
@@ -514,8 +534,8 @@ class MultiAgentVoyager:
                     else:
                         other_events[agent.username].append((event_type, event))
 
-            logging.debug(f"Chat events collected:\n{chat_events}")
-            logging.debug(f"Other events collected:\n{other_events}")
+            logging.debug(f"Chat events collected:\n" + pformat(chat_events))
+            logging.debug(f"Other events collected:\n" + pformat(other_events))
 
             # copy in the longest thread of chats
             longest_thread = max(chat_events.values(), key=len)
@@ -524,27 +544,16 @@ class MultiAgentVoyager:
 
             # copy one of the agents events for the judge
             new_events[self.judge_username] = new_events[self.agents[0].username]
-            logging.debug(f"Final reorganized events:\n{new_events}")
+            logging.debug(f"Final reorganized events:\n" + pformat(new_events))
             return new_events
 
-        logging.info(f"Starting run_episode with reload={reload}, reset={reset}, episode={episode}")
+        logging.info(f"Starting run_episode with reload={reload}, reset={reset}, episode={episode}, "
+                     f"update_contract={update_contract}")
 
-        # reset for both agents and load scenario
+        # reset agents and load scenario
         if reload:
             logging.info("Reloading scenario...")
             self.load_scenario(reset=reset)
-            # time.sleep(3) # wait for voyagers and scenario to load
-
-        # if a specific episode is provided, look for contract and play it
-        # ideally this should be moved to a different function (except env_step should be moved too)
-        if episode is not None:
-            if not isinstance(episode, int):
-                raise ValueError("episode must be an integer")
-            logging.info(f"Loading specific episode: {episode}")
-            episode_results = self.load_episode(episode)
-            self.run_threads(env_step, args=episode_results)
-            self.reset_agents()
-            return
 
         # get ai_message and parse in parallel
         logging.info('Processing AI messages and parsing results...')
@@ -556,17 +565,89 @@ class MultiAgentVoyager:
         # do env.step in parallel`
         logging.info('Executing environment steps based on parsed AI messages...')
         events = self.run_threads(env_step, args=parsed_results)
+        logging.debug(f"env_step events:\n" + pformat(events))
 
         self.reset_agents()
 
-        logging.info('Fixing chat events...')
+        logging.debug('Fixing chat events...')
         events = fix_chat_events(events)
+        logging.debug('Updating events history...')
+        self.events_history[f'ep{self.episode}'] = events
+
         # check for task success
         logging.info('Checking task success for the episode...')
 
         critic_response = self.check_task_success(events)
-
+        self.negotiations_history[f'ep{self.episode}']['critic_response'] = critic_response
         logging.info(f"Task success response:\n{critic_response}")
+
+        if self.episode < self.num_episodes and update_contract:
+            logging.info(f'Negotiating a new contract for the next episode')
+            self.negotiations_history[f'ep{self.episode+1}'] = {}
+
+            # Get context for negotiation
+            extracted_data = {agent.username: agent.action_agent.extract_event_data(events[agent.username]['events'])
+                              for agent in self.agents}
+            negotiation_context = {agent.username: agent.action_agent.create_observation_string(
+                event_data=extracted_data[agent.username],
+                features=[
+                    "inventory", "scenario", "contract_critique"
+                ],
+                scenario=self.scenario_description,
+                contract_critique=critic_response[self.judge_username]['critique']
+            ) for agent in self.agents}
+
+            def create_episode_string(ep_num, agent_name=None):
+                ep_key = f'ep{ep_num}'
+
+                conversation_log = self.negotiations_history[ep_key].get('conversation_log', '')
+                contract = self.negotiations_history[ep_key].get('contract', '')
+                contract_critique = self.negotiations_history[ep_key].get('critic_response', '')
+
+                task_critique = ''
+
+                if conversation_log:
+                    if agent_name:
+                        # todo: remove thoughts of other players
+                        conversation_log = ''
+
+                if contract_critique:
+                    for agent, agent_critic in contract_critique.items():
+                        if agent_critic['critique'] == "":
+                            agent_critic['critique'] = "No critic is given"
+                    if agent_name:
+                        task_critique = f'Task critique from the judge: {contract_critique[agent_name]["critique"]}\n'
+                    else:
+                        task_critique = '\n'.join([f'Task critique from the judge for {agent.username}: '
+                                                   f'{contract_critique[agent.username]["critique"]}'
+                                                   for agent in self.agents])
+
+                    contract_critique = '\n'.join([f'Contract critique from the judge for {agent.username}: '
+                                                   f'{contract_critique[self.judge_username]["critique"][agent.username]}'
+                                                   for agent in self.agents])
+
+                episode_string = (f"Episode {ep_num + 1}:\n"
+                                  f"Negotiations Log:\n{conversation_log}\n"
+                                  f"Contract:\n{contract}\n"
+                                  f"Contract Critique:\n{contract_critique}\n"
+                                  f"Task Critique:\n{task_critique}\n")
+                return episode_string
+
+            for agent in self.agents:
+                username = agent.username
+                negotiation_context[username] = 'Negotiation History\n'
+                negotiation_context[username] += '/n'.join([create_episode_string(ep_num, agent_name=username)
+                                                           for ep_num in range(self.episode + 1)])
+
+            self.negotiate_contract(context=negotiation_context, episode=self.episode + 1)
+
+            contract_path = f"{self.save_dir}/contract_ep_{self.episode + 1}.txt"
+            with open(contract_path, 'w') as contract_file:
+                logging.info(f'Saving the contract to {contract_path}...')
+                contract_file.write(self.contract)
+
+            for agent in self.agents:
+                agent.contract = self.contract
 
         # update agents (note this function does not need to be run with threads; could add a flag to just iterate)
         results = self.run_threads(update_agent, args={
@@ -580,7 +661,7 @@ class MultiAgentVoyager:
 
         return results
 
-    def negotiate_contract(self, max_turns=8):
+    def negotiate_contract(self, max_turns=8, context: dict = None, episode=None):
         """
         Generates a contract for the agents to follow and sets self.contract to the contract.
         """
@@ -592,6 +673,12 @@ class MultiAgentVoyager:
         agent1 = self.agents[0]
         agent2 = self.agents[1]
 
+        if context is None:
+            context = defaultdict(str)
+
+        if episode is None:
+            episode = self.episode
+
         negotiator1 = Negotiator(
             name=agent1.username,
             task=agent1.task,
@@ -600,6 +687,7 @@ class MultiAgentVoyager:
             scenario=self.scenario_description,
             model=self.negotiator_model_name,
             temperature=self.negotiator_temperature,
+            context=context[agent1.username],
         )
 
         negotiator2 = Negotiator(
@@ -610,12 +698,16 @@ class MultiAgentVoyager:
             scenario=self.scenario_description,
             model=self.negotiator_model_name,
             temperature=self.negotiator_temperature,
+            context=context[agent2.username],
         )
 
         # hold a negotiation between players, where negotiator1 starts first
         negotiation = Negotiation(negotiator1, negotiator2, max_turns=max_turns, save_dir=self.save_dir)
-        negotiation.simulate()
+        conversation_log = negotiation.simulate()
         self.contract = negotiation.get_contract()
+
+        self.negotiations_history[f'ep{episode}']['conversation_log'] = conversation_log
+        self.negotiations_history[f'ep{episode}']['contract'] = self.contract
 
     def run(self):
         if self.load_from_save:
@@ -625,20 +717,24 @@ class MultiAgentVoyager:
         logging.info('Loading scenario...')
         self.load_scenario(reset='hard')
 
+        self.negotiations_history[f'ep{self.episode}'] = {}
         if self.contract_mode == "auto":
             if self.contract is not None:
                 logging.warning("Contract provided but contract_mode is 'auto'. Contract will be ignored.")
             logging.info('Negotiating contract...')
-            self.negotiate_contract()
+            conversation_log = self.negotiate_contract()
+            self.negotiations_history[f'ep{self.episode}']['conversation_log'] = conversation_log
         elif self.contract_mode == "manual":
             logging.info('Contract is provided manually')
+            self.negotiations_history[f'ep{self.episode}']['contract'] = self.contract
+            self.negotiations_history[f'ep{self.episode}']['conversation_log'] = 'Logs are not given'
 
         contract_path = f"{self.save_dir}/contract.txt"
         with open(contract_path, 'w') as contract_file:
             logging.info(f'Saving the contract to {contract_path}...')
             contract_file.write(self.contract)
 
-        logging.info('Initializing threads for agents...')
+        logging.debug('Initializing reset threads for agents...')
         self.run_threads(
             target=lambda agent_t, _, args: agent_t.reset(task=agent_t.task, **args),
             args={
@@ -655,18 +751,19 @@ class MultiAgentVoyager:
 
         replay = False
         done = False
+        update_contract = True
 
         while not done:
             if replay:
                 logging.info('Repeating episode...')
-                self.run_episode(episode=self.episode, reload=True, reset='soft')
+                self.run_episode(episode=self.episode, reload=True, reset='soft', update_contract=update_contract)
             else:
                 episode_dir = f"{self.save_dir}/episodes/episode{self.episode}"
                 U.f_mkdir(episode_dir)
 
                 reload = self.episode != 0
                 logging.info(f'Starting episode {self.episode}...')
-                results = self.run_episode(reload=reload, reset='soft')
+                results = self.run_episode(reload=reload, reset='soft', update_contract=update_contract)
                 logging.info(f'Episode {self.episode} completed.')
 
                 for agent in self.agents:

@@ -249,7 +249,6 @@ class Voyager:
         self.env.close()
 
     def step(self):
-
         if self.action_agent_rollout_num_iter < 0:
             raise ValueError("Agent must be reset before stepping")
         ai_message = self.action_agent.llm(self.messages)
@@ -455,3 +454,9 @@ class Voyager:
             self.curriculum_agent.update_exploration_progress(info)
             self.logger(f"Completed tasks: {', '.join(self.curriculum_agent.completed_tasks)}")
             self.logger(f"Failed tasks: {', '.join(self.curriculum_agent.failed_tasks)}")
+
+    def get_inventory(self):
+        return self.env.get_inventory()
+
+    def get_observations(self):
+        return self.env.get_observations()

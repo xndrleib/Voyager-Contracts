@@ -406,27 +406,30 @@ class MultiAgentVoyager:
         json_contents = U.json_load(file_name)
         return json_contents
 
-    # def replay_episode(self, episode):
-    #     if not isinstance(episode, int):
-    #         raise ValueError("episode must be an integer")
-
-    #     episode_results = self.load_episode(episode)
-    #     self.run_threads(env_step, args=episode_results)
-
-    def run_episode(self, episode=None, reload=True, reset='soft'):
+    def run_episode(self, episode=None, reload=True, reset='soft', update_contract=False):
         # get ai_message and parse
         def get_ai_message_parse(agent, result):
-            logging.debug(f"Getting AI message for agent {agent.username}")
-            if agent.action_agent_rollout_num_iter < 0:
-                raise ValueError("Agent must be reset before stepping")
+            retry = 1
 
-            ai_message = agent.action_agent.llm(agent.messages)
-            logging.info(f"AI message for {agent.username}:\n{ai_message.content}")
-            agent.conversations.append(
-                (agent.messages[0].content, agent.messages[1].content, ai_message.content)
-            )
-            parsed_result = agent.action_agent.process_ai_message(message=ai_message)
-            result.update({'parsed_result': parsed_result})
+            while retry > 0:
+                try:
+                    logging.debug(f"Sending a message to AI for agent {agent.username}")
+                    if agent.action_agent_rollout_num_iter < 0:
+                        raise ValueError("Agent must be reset before stepping")
+
+                    ai_message = agent.action_agent.llm(agent.messages)
+
+                    logging.debug(f"Parsing a message to AI for agent {agent.username}")
+                    parsed_result = agent.action_agent.process_ai_message(message=ai_message)
+
+                    if parsed_result is None:
+                        raise ValueError("Parsed result is None")
+
+                    result.update({'parsed_result': parsed_result})
+                    retry = 0
+                except Exception as error:
+                    logging.debug(f'get_ai_message_parse: Error parsing action response (before program execution): {error}')
+                    retry -= 1
 
         # do env.step
         def env_step(agent, result, parsed_result):

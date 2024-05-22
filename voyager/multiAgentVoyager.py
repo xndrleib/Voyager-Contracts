@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 
 import requests
+from pprint import pformat
 
 import voyager.utils as U
 from voyager import Voyager
@@ -145,14 +146,16 @@ class MultiAgentVoyager:
         for thread in threads:
             thread.join()
             logging.info(f"Thread for agent {thread.name} has completed")
-        logging.info(f"All threads have completed. Results:\n{results}")
+        logging.info(f"All threads have completed. Results:\n" + pformat(results))
         return results
 
-    def reset_agents(self, mode='soft', timeout=10):
+    def reset_agents(self, mode='soft'):
         args = {agent.username: {'options': {'mode': mode, 'wait_ticks': agent.env_wait_ticks}} for agent in
                 self.agents}
-        self.run_threads(lambda agent, _, options: agent.env.reset(options=options), args=args)
+        results = self.run_threads(lambda agent, _, options: agent.env.reset(options=options), args=args)
+        logging.info(f"Reset agents. Data Returned:\n" + pformat(results))
         time.sleep(2)
+        return results
 
     def save_scenario(self, save_options):
         """
@@ -198,13 +201,6 @@ class MultiAgentVoyager:
             # Removing block types with no positions found
             block_positions_ar = {k: v for k, v in block_positions_ar.items() if v}
             return block_positions_ar
-
-        # self.judge.env.reset(
-        #         options={
-        #             "mode": "hard",
-        #             "wait_ticks": self.judge.env_wait_ticks,
-        #         }
-        #     )
 
         x, y, z = center_position['x'], center_position['y'], center_position['z']
 
@@ -288,7 +284,7 @@ class MultiAgentVoyager:
             raise ValueError('At least one agent must be initialized to load scenario')
 
         self.reset_agents(mode='hard')
-        logging.info('Agents reset.')
+        logging.info(f'Agents reset.')
 
         x, y, z = center_position['x'], center_position['y'], center_position['z']
 
@@ -307,7 +303,7 @@ class MultiAgentVoyager:
         )
         logging.info('Environment setup complete.')
 
-        if self.scenario_code is not None:
+        if self.scenario_code:
             self.judge.env.step(self.scenario_code)
             logging.info('Executed scenario code.')
 
@@ -336,8 +332,6 @@ class MultiAgentVoyager:
                 critic_agent = agent.judge_agent
             else:
                 critic_agent = agent.critic_agent
-
-            logging.debug(f"Using critic agent:\n{critic_agent}")
 
             human_message = critic_agent.render_human_message(
                 events=events,
@@ -654,7 +648,7 @@ class MultiAgentVoyager:
             },
             shared_args=True
         )
-        logging.info('Threads initialized.')
+        logging.debug(f'Reset threads initialized.\nContract:\n{self.contract}.\nContext: ')
 
         replay = False
         done = False

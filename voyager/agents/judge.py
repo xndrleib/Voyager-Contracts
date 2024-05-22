@@ -154,7 +154,6 @@ class JudgeAgent:
         critic = self.llm(messages).content
         self.logger(f"****Judge Agent ai message****\n{critic}")
 
-        # fix this 
         try:
             response = fix_and_parse_json(critic)
             

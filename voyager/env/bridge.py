@@ -114,16 +114,16 @@ class VoyagerEnv(gym.Env):
         return None
 
     def start_mc_instance(self):
-        print("Starting Minecraft server")
+        logging.debug("Starting Minecraft server")
         self.mc_instance.run()
         self.mc_port = self.mc_instance.port
         self.reset_options["port"] = self.mc_instance.port
-        print(f"Server started on port {self.reset_options['port']}")
+        logging.debug(f"Server started on port {self.reset_options['port']}")
 
     def restart_mineflayer_with_backoff(self):
         retry, max_retries, backoff_factor = 0, 3, 2
         while retry <= max_retries:
-            print("Mineflayer process has exited, restarting")
+            logging.debug("Mineflayer process has exited, restarting")
             self.mineflayer.run()
             time.sleep(backoff_factor ** retry)
             if self.mineflayer.is_running:
@@ -136,12 +136,12 @@ class VoyagerEnv(gym.Env):
             result = self.send_request(f"{self.server}/start", json_data=self.reset_options)
             if result is not None:
                 if result.status_code == 200:
-                    print("Server started successfully")
+                    logging.debug("Server started successfully")
                     return result.json()
             else:
-                print("Received non-200 status code")
+                logging.warning("Received non-200 status code")
         except Exception as e:
-            print(f"Server start failed. Error: {str(e)}")
+            logging.error(f"Server start failed. Error: {str(e)}")
         raise RuntimeError("Failed to start server via /start endpoint")
 
     def check_process(self):

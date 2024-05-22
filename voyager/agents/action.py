@@ -1,3 +1,4 @@
+import logging
 import re
 import time
 
@@ -307,15 +308,17 @@ class ActionAgent:
         assert isinstance(message, AIMessage)
 
         retry = 3
-        error = None
         while retry > 0:
             try:
                 babel = require("@babel/core")
                 babel_generator = require("@babel/generator").default
-
                 code_pattern = re.compile(r"```(?:javascript|js)(.*?)```", re.DOTALL)
                 code = "\n".join(code_pattern.findall(message.content))
+                logging.debug(f'process_ai_message: Extracted {len(code)} javascript code symbols from the AI message. '
+                              f'Parsing...')
                 parsed = babel.parse(code)
+                logging.debug(f'process_ai_message: Code is parsed')
+
                 functions = []
                 assert len(list(parsed.program.body)) > 0, "No functions found"
                 for i, node in enumerate(parsed.program.body):
@@ -343,12 +346,12 @@ class ActionAgent:
                         if len(function["params"]) == 1 and function["params"][0].name == "bot":
                             candidate_functions.append(function)
 
-                assert len(candidate_functions) == 1, (
-                    f"Expected exactly one main function with a single 'bot' parameter, "
-                    f"found {len(candidate_functions)}:\n{candidate_functions}"
-                )
+                if len(candidate_functions) > 1:
+                    logging.warning((f"Expected exactly one main function with a single 'bot' parameter, "
+                                     f"found {len(candidate_functions)}:\n{candidate_functions}."
+                                     f"Continue with the last one"))
 
-                main_function = candidate_functions[0]
+                main_function = candidate_functions[-1]
 
                 program_code = "\n\n".join(function["body"] for function in functions)
 
@@ -367,9 +370,10 @@ if (result === 'Timeout reached') {{
                     "exec_code": exec_code,
                 }
             except Exception as e:
+                logging.debug(f'process_ai_message: Error parsing action response (before program execution): {e}.'
+                              f'The AI message content:\n{message.content}')
                 retry -= 1
-                error = e
-        return f"Error parsing action response (before program execution): {error}"
+        return None
 
     def summarize_chatlog(self, events):
         def filter_item(message: str):

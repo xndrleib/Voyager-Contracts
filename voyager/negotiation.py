@@ -2,6 +2,7 @@ import openai
 import logging
 from api_keys import openai_api_key
 from voyager.prompts import load_prompt
+import re
 
 
 class Negotiator:
@@ -43,14 +44,76 @@ class Negotiator:
             temperature=self.temperature,
         )
 
-        # Parsing the response based on the new structure
-        split_response = response['choices'][0]['message']['content'].split('[message]')
-        inner_thought = split_response[0].replace('[thinking]', '').strip()
-        message = split_response[1].strip() if len(split_response) > 1 else ""
+        response_content = response['choices'][0]['message']['content']
 
-        self.messages.append({"role": "assistant", "content": response['choices'][0]['message']['content']})
+        # Regular expression patterns for [thinking] and [message] with DOTALL flag to match newlines
+        thinking_pattern = r'\[thinking\].*?(?=\[message\]|\Z)'
+        message_pattern = r'\[message\].*?(?=\[thinking\]|\Z)'
 
-        return inner_thought, message
+        thinking_lines = re.findall(thinking_pattern, response_content, re.DOTALL)
+        message_lines = re.findall(message_pattern, response_content, re.DOTALL)
+
+        # todo: add new line after a message or thought only if there is gonna be one more line
+
+        inner_thoughts = ''
+        for thinking_line in thinking_lines:
+            thinking_line = thinking_line.replace('[thinking]', '').strip()
+            inner_thoughts += f'{thinking_line}'
+            if '[message]' in thinking_line:
+                logging.warning(f'[message] in thinking line: {thinking_line}')
+
+        message = ''
+        for message_line in message_lines:
+            message_line = message_line.replace('[message]', '').strip()
+            message += f'{message_line}'
+            if '[thinking]' in message_line:
+                logging.warning(f'[thinking] in message line: {message_line}')
+
+        self.messages.append({"role": "assistant", "content": response_content})
+        return inner_thoughts, message
+
+    def prepare_conversation_string(self):
+        results = ''
+        for item in self.messages:
+            if item['role'] == 'assistant':
+                content = item['content']
+
+                # Regular expression patterns for [thinking] and [message] with DOTALL flag to match newlines
+                thinking_pattern = r'\[thinking\].*?(?=\[message\]|\Z)'
+                message_pattern = r'\[message\].*?(?=\[thinking\]|\Z)'
+
+                thinking_lines = re.findall(thinking_pattern, content, re.DOTALL)
+                message_lines = re.findall(message_pattern, content, re.DOTALL)
+
+                inner_thoughts = ''
+                for thinking_line in thinking_lines:
+                    thinking_line = thinking_line.replace('[thinking]', '').strip()
+                    inner_thoughts += f'{thinking_line}'
+                    if '[message]' in thinking_line:
+                        logging.warning(f'[message] in thinking line: {thinking_line}')
+
+                if inner_thoughts:
+                    results += f'{self.name} (Thought): {inner_thoughts}\n'
+
+                message = ''
+                for message_line in message_lines:
+                    message_line = message_line.replace('[message]', '').strip()
+                    message += f'{message_line}'
+                    if '[thinking]' in message_line:
+                        logging.warning(f'[thinking] in message line: {message_line}')
+
+                if message:
+                    results += f'{self.name} (Message): {message}\n'
+
+                results += '\n'
+
+            elif item['role'] == 'user':
+                content = item['content']
+                results += f'{self.other_name} (Message): {content}\n\n'
+            else:
+                continue
+
+        return results
 
 
 class Negotiation:
@@ -61,8 +124,6 @@ class Negotiation:
         self.save_dir = save_dir
         self.reset()
         self.logger = self.setup_custom_logger()
-
-        # todo: keep track of all messages
 
     def reset(self):
         self.conversation_log = []
@@ -136,7 +197,6 @@ class Negotiation:
         accept_flag = False
         continue_flag = False
         for turn in range(self.max_turns):
-            # todo: use not only the last message for prompt
             if turn == 0:
                 thought, message = self.agent1.generate_message()
                 self.conversation_log.append((self.agent1.name, thought, message))
@@ -177,8 +237,6 @@ class Negotiation:
         # Summarize the conversation
         summary = self.summarize(model="gpt-3.5-turbo")
         self.logger(f"Negotiation Summary:\n{summary}\n", print_flag=False)
-
-        return self.conversation_log
 
     def get_contract(self):
         if self.contract is None:

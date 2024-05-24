@@ -17,6 +17,10 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S
                     encoding='utf-8', level=logging.DEBUG)
 
 
+class AgentEventsError(Exception):
+    pass
+
+
 class MultiAgentVoyager:
     def __init__(self, num_agents=2, server_port=3000, usernames=("Gizmo", "Glitch"), judge_username="Judy",
                  scenario_file=None, save_dir=None, critic_mode="auto", contract_mode="auto", contract=None,
@@ -784,7 +788,19 @@ class MultiAgentVoyager:
 
                 reload = self.episode != 0
                 logging.info(f'Starting episode {self.episode}...')
-                results = self.run_episode(reload=reload, reset='soft', update_contract=update_contract)
+
+                retry, max_retry = 0, 2
+                while retry <= max_retry:
+                    try:
+                        results = self.run_episode(reload=reload, reset='soft', update_contract=update_contract)
+                        break
+                    except AgentEventsError as e:
+                        logging.error(f'Retry {retry}/{max_retry} due to error: {e}')
+                        retry += 1
+                        if retry > max_retry:
+                            logging.info(f'Episode {self.episode} is failed.')
+                            raise
+
                 logging.info(f'Episode {self.episode} completed.')
 
                 for agent in self.agents:

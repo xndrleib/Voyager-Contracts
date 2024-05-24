@@ -729,9 +729,16 @@ class MultiAgentVoyager:
             context=context[agent2.username],
         )
 
-        negotiation = Negotiation(negotiator1, negotiator2, max_turns=max_turns, save_dir=self.save_dir)
-        negotiation.simulate()
-        self.contract = negotiation.get_contract()
+        retry, max_retry = 0, 1
+        while retry <= max_retry:
+            try:
+                logging.debug(f'Starting Negotiations. Attempt: {retry}/{max_retry}')
+                negotiation = Negotiation(negotiator1, negotiator2, max_turns=max_turns, save_dir=self.save_dir)
+                negotiation.simulate()
+                self.contract = negotiation.get_contract()
+                break
+            except IndexError:
+                retry += 1
 
         self.negotiations_history[f'ep{episode}']['conversation_log'] = {}
         self.negotiations_history[f'ep{episode}']['conversation_log'][

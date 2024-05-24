@@ -313,12 +313,18 @@ class MultiAgentVoyager:
         if chest_contents:
             setup_commands += U.chest_commands(block_positions, chest_contents)
 
+        logging.debug("Reset Judge's Server...")
+        self.judge.env.reset()
+        logging.debug("Judge's Server is Reset.")
+
+        logging.debug('Judge is making environment setup...')
         self.judge.env.step(code=setup_commands, programs=self.judge.skill_manager.programs)
-        logging.info('Environment setup complete.')
+        logging.debug('Environment setup complete.')
 
         if self.scenario_code:
+            logging.debug('Judge is running scenario_code...')
             self.judge.env.step(self.scenario_code)
-            logging.info('Executed scenario code.')
+            logging.debug('Executed scenario code.')
 
     # update a global chest memory to keep consistent across agents
     def update_chest_memory(self, chests):

@@ -1,18 +1,16 @@
 import copy
+import logging
+import random
 import threading
 import time
-from datetime import datetime
 from collections import defaultdict
-import random
+from datetime import datetime
 
 import requests
-from pprint import pformat
 
 import voyager.utils as U
 from voyager import Voyager
 from voyager.negotiation import Negotiation, Negotiator
-
-import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
                     filename=f'logs/program/{datetime.now().strftime("%Y-%m-%d %H%M%S")}.log',

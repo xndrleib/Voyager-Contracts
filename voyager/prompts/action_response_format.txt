@@ -6,9 +6,8 @@ Plan:
 ...
 Code:
 ```javascript
-// helper functions (only if needed, try to avoid them)
+// auxiliary functions
 ...
-// only one main function with a single 'bot' parameter is expected and should be placed after the helper functions
 async function yourMainFunctionName(bot) {
   // ...
 }

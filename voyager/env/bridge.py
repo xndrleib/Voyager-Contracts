@@ -2,6 +2,7 @@ import os.path
 import time
 import warnings
 from typing import Any, Tuple, Dict
+import random
 
 import requests
 import json
@@ -19,14 +20,14 @@ import logging
 
 class VoyagerEnv(gym.Env):
     def __init__(
-        self,
-        mc_port=None,
-        username="bot",
-        azure_login=None,
-        server_host="http://127.0.0.1",
-        server_port=3000,
-        request_timeout=5,
-        log_path="./logs",
+            self,
+            mc_port=None,
+            username="bot",
+            azure_login=None,
+            server_host="http://127.0.0.1",
+            server_port=3000,
+            request_timeout=5,
+            log_path="./logs",
     ):
         if not mc_port and not azure_login:
             raise ValueError("Either mc_port or azure_login must be specified")
@@ -52,7 +53,7 @@ class VoyagerEnv(gym.Env):
         self.server_paused = False
 
     def get_mineflayer_process(self, server_port):
-        U.f_mkdir(self.log_path, "mineflayer")
+        U.f_mkdir(self.log_path, f"mineflayer/port_{str(server_port)}")
         file_path = os.path.abspath(os.path.dirname(__file__))
         return SubprocessMonitor(
             commands=[
@@ -62,7 +63,8 @@ class VoyagerEnv(gym.Env):
             ],
             name="mineflayer",
             ready_match=r"Server started on port (\d+)",
-            log_path=U.f_join(self.log_path, "mineflayer"),
+            log_path=U.f_join(self.log_path, f"mineflayer/port_{str(server_port)}"),
+            username=self.username
         )
 
     def get_mc_instance(self):
@@ -106,8 +108,8 @@ class VoyagerEnv(gym.Env):
                 logging.error("Request Error: %s", err)
 
             attempts += 1
-            sleep_time = backoff_factor * (2 ** attempts)
-            logging.info(f"Retrying in {sleep_time} seconds...")
+            sleep_time = backoff_factor * (2 ** attempts) + random.uniform(0, 1)
+            logging.info(f"Retrying in {sleep_time:.2f} seconds...")
             time.sleep(sleep_time)
 
         logging.error("Failed to receive a valid response after several attempts.")
@@ -123,12 +125,18 @@ class VoyagerEnv(gym.Env):
     def restart_mineflayer_with_backoff(self):
         retry, max_retries, backoff_factor = 0, 3, 2
         while retry <= max_retries:
-            logging.debug("Mineflayer process has exited, restarting")
+            logging.debug(f"Attempt {retry + 1}: Mineflayer process has exited, attempting to restart")
             self.mineflayer.run()
-            time.sleep(backoff_factor ** retry)
+            sleep_time = backoff_factor ** retry + random.uniform(0, 1)  # Exponential backoff with jitter
+            logging.info(f"Retrying in {sleep_time:.2f} seconds...")
+            time.sleep(sleep_time)
             if self.mineflayer.is_running:
+                logging.info("Mineflayer restarted successfully.")
                 return
+            else:
+                logging.warning(f"Mineflayer failed to start on attempt {retry + 1}")
             retry += 1
+        logging.error("Failed to restart Mineflayer after several attempts")
         raise RuntimeError("Failed to restart Mineflayer after several attempts")
 
     def try_server_start_endpoint(self):
@@ -151,7 +159,18 @@ class VoyagerEnv(gym.Env):
         if not self.mineflayer.is_running:
             self.restart_mineflayer_with_backoff()
 
-        return self.try_server_start_endpoint()
+        retry, max_retries = 0, 1
+        while retry <= max_retries:
+            try:
+                results = self.try_server_start_endpoint()
+                return results
+            except Exception as e:
+                logging.error(f"check_process: Server failed to /start: {str(e)}. Attempts: {max_retries - retry}")
+
+                if retry < max_retries:
+                    logging.debug(f"check_process: Restarting Mineflayer due to an error")
+                    self.restart_mineflayer_with_backoff()
+                retry += 1
 
     def step(self, code: str, programs: str = ""):
         if not self.has_reset:
@@ -160,7 +179,8 @@ class VoyagerEnv(gym.Env):
         data = {"code": code, "programs": programs}
         result = self.send_request(f"{self.server}/step", data)
         if result is None:
-            raise RuntimeError("Failed to get a valid response from the Minecraft server")
+            raise RuntimeError(f"Failed to get a valid response from the Minecraft server, port: {self.server_port}. "
+                               f"Server is running: {self.mineflayer.is_running}")
         returned_data = result.json()
         return json.loads(returned_data)
 

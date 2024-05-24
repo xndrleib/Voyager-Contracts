@@ -54,6 +54,7 @@ class MultiAgentVoyager:
         self.events_history = {}
         self.load_from_save = False
         self.reward_item_names = None
+        self.context_len_episodes = 3
 
         assert critic_mode in ["auto", "manual"]
         assert contract_mode in ["auto", "manual"]
@@ -596,19 +597,7 @@ class MultiAgentVoyager:
 
         if self.episode < self.num_episodes and update_contract:
             logging.info(f'Negotiating a new contract for the next episode')
-            self.negotiations_history[f'ep{self.episode+1}'] = {}
-
-            # Get context for negotiation
-            extracted_data = {agent.username: agent.action_agent.extract_event_data(events[agent.username]['events'])
-                              for agent in self.agents}
-            negotiation_context = {agent.username: agent.action_agent.create_observation_string(
-                event_data=extracted_data[agent.username],
-                features=[
-                    "inventory", "scenario", "contract_critique"
-                ],
-                scenario=self.scenario_description,
-                contract_critique=critic_response[self.judge_username]['critique']
-            ) for agent in self.agents}
+            self.negotiations_history[f'ep{self.episode + 1}'] = {}
 
             def create_episode_string(ep_num, agent_name=None):
                 ep_key = f'ep{ep_num}'
@@ -663,11 +652,13 @@ class MultiAgentVoyager:
 
                 return episode_string
 
+            negotiation_context = {}
             for agent in self.agents:
                 username = agent.username
-                negotiation_context[username] = 'Negotiation History\n'
+                negotiation_context[username] = f'Negotiation History\n'
                 negotiation_context[username] += '\n'.join([create_episode_string(ep_num, agent_name=username)
-                                                           for ep_num in range(self.episode + 1)])
+                                                            for ep_num in
+                                                            range(self.episode + 1)[-self.context_len_episodes:]])
 
             self.negotiate_contract(context=negotiation_context, episode=self.episode + 1)
 

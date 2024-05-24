@@ -1,26 +1,66 @@
-// send a message to another player indicating that the bot has finished its turn
+// Send a signal to another player
 async function sendSignal(bot) {
   bot.chat("[player signal]")
 }
 
-// Example usage:
-// Suppose you want to alterate task1 and task2 with another player
-async function task1() {
-  console.log("Starting task1...");
-  await new Promise(r => setTimeout(r, 5000)); // Simulate a 5 second task
-  sendSignal(bot);
+// The waitSignal function listens for a "[signal received]" message to coordinate turn-taking, optionally running a task while waiting
+async function waitSignal(bot, task = null, timeoutDuration = 30000) {
+    let timeout;
+
+    const chatListening = new Promise((resolve, reject) => {
+        function chatHandler(username, message) {
+            if (username !== bot.username && message === '[player signal]') {
+                bot.chat('[signal received]')
+                clearTimeout(timeout);
+                resolve();
+                bot.removeListener('chat', chatHandler);
+            }
+        }
+
+        bot.on('chat', chatHandler);
+        bot.chat("[waiting signal]")
+
+        timeout = setTimeout(() => {
+            bot.removeListener('chat', chatHandler);
+            bot.chat("[signal timeout]");
+            resolve()
+        }, timeoutDuration);
+    });
+
+    let taskExecution;
+    if (task) {
+        taskExecution = task(bot);
+        await Promise.all([chatListening, taskExecution]);
+    } else {
+        await chatListening;
+    }
 }
-async function task2() {
-  console.log("Starting task2...");
-  await new Promise(r => setTimeout(r, 5000)); // Simulate a 5 second task
-  sendSignal(bot);
+
+// Example of Usage: Synchronized Task Execution
+// In this scenario, two bots perform a series of tasks that need to be executed in a specific sequence. Each bot must wait for a signal from the other bot indicating that it has completed its task before starting its own.
+
+// Function for Task 1
+async function task1(bot) {
+    console.log("Starting task1...");
+    // TASK CODE
+    sendSignal(bot); // Send signal after task is complete
 }
-// Player 1 code
-async function player1() {
-  await waitSignal(bot, task1);
-  await waitSignal(bot, task2);
-// Player 2 code
-async function player2() {
-  await waitSignal(bot, task2);
-  await waitSignal(bot, task1);
+
+// Function for Task 2
+async function task2(bot) {
+    console.log("Starting task2...");
+    // TASK CODE
+    sendSignal(bot); // Send signal after task is complete
+}
+
+// Bot 1 code
+async function bot1(bot) {
+    await waitSignal(bot, task1); // Wait for signal and execute Task 1
+    await waitSignal(bot, task2); // Wait for signal and execute Task 2
+}
+
+// Bot 2 code
+async function bot2(bot) {
+    await waitSignal(bot, task2); // Wait for signal and execute Task 2
+    await waitSignal(bot, task1); // Wait for signal and execute Task 1
 }

@@ -37,7 +37,7 @@ async function waitSignal(bot, task = null, timeoutDuration = 30000) {
     const chatListening = new Promise((resolve, reject) => {
         function chatHandler(username, message) {
             if (username !== bot.username && message === '[player signal]') {
-                bot.chat('[signal recieved]')
+                bot.chat('[signal received]')
                 clearTimeout(timeout);
                 resolve();
                 bot.removeListener('chat', chatHandler);

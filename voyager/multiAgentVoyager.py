@@ -568,7 +568,17 @@ class MultiAgentVoyager:
         # do env.step in parallel`
         logging.info('Executing environment steps based on parsed AI messages...')
         events = self.run_threads(env_step, args=parsed_results)
-        logging.debug(f"env_step events:\n" + pformat(events))
+
+        # Validate results of env.step
+        rerun = False
+        for agent in self.agents:
+            agent_events = events.get(agent.username, None)
+            if not agent_events:
+                rerun = True
+                logging.error(f'During execution of env.step a problem happened and agent_events for {agent.username}'
+                              f'is empty or None')
+        if rerun:
+            raise AgentEventsError('Agent events missing for one or more agents, requiring rerun')
 
         self.reset_agents()
 

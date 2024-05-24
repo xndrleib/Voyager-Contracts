@@ -144,7 +144,6 @@ class MultiAgentVoyager:
         threads = []
         for agent in agents:
             result = {}
-            logging.debug(f"Arguments for agent {agent.username}:\n{args[agent.username]}")
             thread = threading.Thread(target=target, args=(agent, result), kwargs=args[agent.username], daemon=True)
             results[agent.username] = result
             threads.append(thread)
@@ -153,14 +152,12 @@ class MultiAgentVoyager:
         for thread in threads:
             thread.join()
             logging.info(f"Thread for agent {thread.name} has completed")
-        logging.info(f"All threads have completed. Results:\n" + pformat(results))
         return results
 
     def reset_agents(self, mode='soft'):
         args = {agent.username: {'options': {'mode': mode, 'wait_ticks': agent.env_wait_ticks}} for agent in
                 self.agents}
         results = self.run_threads(lambda agent, _, options: agent.env.reset(options=options), args=args)
-        logging.info(f"Reset agents. Data Returned:\n" + pformat(results))
         time.sleep(2)
         return results
 
@@ -730,8 +727,10 @@ class MultiAgentVoyager:
         self.contract = negotiation.get_contract()
 
         self.negotiations_history[f'ep{episode}']['conversation_log'] = {}
-        self.negotiations_history[f'ep{episode}']['conversation_log'][negotiator1.name] = negotiator1.prepare_conversation_string()
-        self.negotiations_history[f'ep{episode}']['conversation_log'][negotiator2.name] = negotiator2.prepare_conversation_string()
+        self.negotiations_history[f'ep{episode}']['conversation_log'][
+            negotiator1.name] = negotiator1.prepare_conversation_string()
+        self.negotiations_history[f'ep{episode}']['conversation_log'][
+            negotiator2.name] = negotiator2.prepare_conversation_string()
 
         self.negotiations_history[f'ep{episode}']['contract'] = self.contract
 

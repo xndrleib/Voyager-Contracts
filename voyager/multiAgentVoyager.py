@@ -277,7 +277,7 @@ class MultiAgentVoyager:
             logging.info(f'Set task for agent {agent.username}: {agent.task}')
 
         self.judge.task = tasks
-        logging.info('Set judge tasks.')
+        logging.info("Set judge's tasks.")
 
         js_file = file_name.replace('.json', '.js')
         if U.f_exists(js_file):
@@ -474,6 +474,8 @@ class MultiAgentVoyager:
                 code=code,
                 programs=agent.skill_manager.programs,
             )
+
+            logging.debug(f"Step is executed")
             agent.recorder.record(events_ar, agent.task)
             self.update_chest_memory(events_ar[-1][1]["nearbyChests"])
             result.update({'events': events_ar})
@@ -542,9 +544,6 @@ class MultiAgentVoyager:
                     else:
                         other_events[agent.username].append((event_type, event))
 
-            logging.debug(f"Chat events collected:\n" + pformat(chat_events))
-            logging.debug(f"Other events collected:\n" + pformat(other_events))
-
             # copy in the longest thread of chats
             longest_thread = max(chat_events.values(), key=len)
             new_events = {agent.username: {'events': longest_thread + other_events[agent.username]} for agent in
@@ -552,7 +551,6 @@ class MultiAgentVoyager:
 
             # copy one of the agents events for the judge
             new_events[self.judge_username] = new_events[self.agents[0].username]
-            logging.debug(f"Final reorganized events:\n" + pformat(new_events))
             return new_events
 
         logging.info(f"Starting run_episode with reload={reload}, reset={reset}, episode={episode}, "
@@ -570,7 +568,7 @@ class MultiAgentVoyager:
         # save episode
         self.save_episode(parsed_results)
 
-        # do env.step in parallel`
+        # do env.step in parallel
         logging.info('Executing environment steps based on parsed AI messages...')
         events = self.run_threads(env_step, args=parsed_results)
 
@@ -634,8 +632,8 @@ class MultiAgentVoyager:
                                                    for agent in self.agents])
 
                     contract_critique_str = '\n'.join([f'Contract Critique from the Judge for {agent.username}: '
-                                                   f'{contract_critique[self.judge_username]["critique"][agent.username]}'
-                                                   for agent in self.agents])
+                                                       f'{contract_critique[self.judge_username]["critique"][agent.username]}'
+                                                       for agent in self.agents])
 
                     # todo: replace with exact value, not the one from the judge's answer
                     total_emeralds = str(sum(list(contract_critique[self.judge_username]['emeralds'].values())))
@@ -646,6 +644,9 @@ class MultiAgentVoyager:
                         emeralds_distribution += \
                             (f'{agent.username} '
                              f'gets {contract_critique[self.judge_username]["emeralds"][agent.username]} emeralds\n')
+                else:
+                    emeralds_distribution = 'The emeralds were not redistributed among agents\n'
+                    contract_critique_str = 'No critic is given\n'
 
                 episode_string = (f"Episode {ep_num + 1}:\n"
                                   f"Negotiations Log:\n{conversation_log}\n"

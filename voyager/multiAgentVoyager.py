@@ -428,11 +428,11 @@ class MultiAgentVoyager:
     def run_episode(self, episode=None, reload=True, reset='soft', update_contract=False):
         # get ai_message and parse
         def get_ai_message_parse(agent, result):
-            retry = 1
+            retry, max_retry = 0, 1
 
-            while retry > 0:
+            while retry <= max_retry:
                 try:
-                    logging.debug(f"Sending a message to AI for agent {agent.username}")
+                    logging.debug(f"Sending a message to AI for agent {agent.username}. Attempt: {retry}/{max_retry}")
                     if agent.action_agent_rollout_num_iter < 0:
                         raise ValueError("Agent must be reset before stepping")
 
@@ -445,10 +445,11 @@ class MultiAgentVoyager:
                         raise ValueError("Parsed result is None")
 
                     result.update({'parsed_result': parsed_result})
-                    retry = 0
+                    break
                 except Exception as error:
-                    logging.debug(f'get_ai_message_parse: Error parsing action response (before program execution): {error}')
-                    retry -= 1
+                    logging.debug(
+                        f'get_ai_message_parse: Error parsing action response (before program execution): {error}')
+                    retry += 1
 
         # do env.step
         def env_step(agent, result, parsed_result):

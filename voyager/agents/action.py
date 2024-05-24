@@ -86,15 +86,15 @@ class ActionAgent:
             # "exploreUntil",
             "mineBlock",
             # "craftItem",
-            "placeItem",
-            "multiAgent",
+            # "placeItem",
+            # "multiAgent",
             # "farm",
             # "smeltItem",
             # "killMob",
         ]
         if not self.llm.model_name == "gpt-3.5-turbo":
             base_skills += [
-                "useChest",
+                # "useChest",
                 "mineflayer",
             ]
         programs = "\n\n".join(load_control_primitives_context(base_skills) + skills)

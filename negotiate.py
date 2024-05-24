@@ -3,7 +3,7 @@ import json
 
 model = "gpt-4o"  # "gpt-3.5-turbo" | "gpt-4" | "gpt-4-turbo" | "gpt-4o"
 
-scenario = 'swapping'
+scenario = 'cleanup'  # 'swapping' | 'cleanup'
 
 with open(f'scenarios/{scenario}.json') as f:
     data = json.load(f)
@@ -11,8 +11,8 @@ with open(f'scenarios/{scenario}.json') as f:
     task1 = data['tasks']['Gizmo']
     task2 = data['tasks']['Glitch']
 
-task1 += ' To make a fair deal you should consider hardness of obtaining of items you have in your inventory'
-task2 += ' To make a fair deal you should consider hardness of obtaining of items you have in your inventory'
+# task1 += ' To make a fair deal you should consider hardness of obtaining of items you have in your inventory'
+# task2 += ' To make a fair deal you should consider hardness of obtaining of items you have in your inventory'
 
 # context1 = "Inventory (1/36): {'obsidian': 26}"
 # context2 = "Inventory (2/36): {'diamond': 2, 'book': 12}"
@@ -26,3 +26,9 @@ agent2 = Negotiator(name="Glitch", task=task2, other_name="Gizmo", other_task=ta
 
 conversation = Negotiation(agent1, agent2, max_turns=10)
 conversation.simulate()
+
+print('Agent 1 Log\n')
+print(agent1.prepare_conversation_string())
+
+print('\n\nAgent 2 Log\n')
+print(agent2.prepare_conversation_string())

@@ -348,7 +348,7 @@ class ActionAgent:
 
                 if len(candidate_functions) > 1:
                     logging.warning((f"Expected exactly one main function with a single 'bot' parameter, "
-                                     f"found {len(candidate_functions)}:\n{candidate_functions}."
+                                     f"found {len(candidate_functions)}:\n{candidate_functions}\n"
                                      f"Continue with the last one"))
 
                 main_function = candidate_functions[-1]

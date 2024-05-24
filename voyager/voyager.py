@@ -23,7 +23,7 @@ class Voyager:
             server_port: int = 3000,
             openai_api_key: str = None,
             env_wait_ticks: int = 20,
-            env_request_timeout: int = 600,
+            env_request_timeout: int = 180,
             max_iterations: int = 160,
             reset_placed_if_failed: bool = False,
             action_agent_model_name: str = "gpt-4",

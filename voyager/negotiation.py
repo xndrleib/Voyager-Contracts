@@ -117,7 +117,7 @@ class Negotiator:
 
 
 class Negotiation:
-    def __init__(self, agent1, agent2, max_turns=6, save_dir='logs'):
+    def __init__(self, agent1: Negotiator, agent2: Negotiator, max_turns=6, save_dir='logs'):
         self.agent1 = agent1
         self.agent2 = agent2
         self.max_turns = max_turns

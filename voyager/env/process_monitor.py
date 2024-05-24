@@ -13,13 +13,20 @@ import voyager.utils as U
 
 class SubprocessMonitor:
     def __init__(self, commands: List[str], name: str, ready_match: str = r".*", log_path: str = "logs",
-                 callback_match: str = r"^(?!x)x$", callback: callable = None, finished_callback: callable = None):
+                 callback_match: str = r"^(?!x)x$", callback: callable = None, finished_callback: callable = None,
+                 username: str = None):
         self.commands = commands
         self.name = name
-        self.logger = logging.getLogger(name)
+
+        if username is not None:
+            self.logger = logging.getLogger(f"subprocess_{name}_{username}")
+        else:
+            self.logger = logging.getLogger(f"subprocess_{name}")
+
         handler = logging.FileHandler(U.f_join(log_path, f"{time.strftime('%Y%m%d_%H%M%S')}.log"))
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
+        self.logger.propagate = False
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)
         self.process = None

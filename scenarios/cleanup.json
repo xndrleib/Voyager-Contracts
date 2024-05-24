@@ -1,5 +1,5 @@
 {
-  "description": "There is a river that has been polluted with slime blocks. Nearby there are three giant mushrooms each containing 9 red mushroom blocks. Harvesting a red mushroom block yields 0-2 (usually 0) red mushrooms, worth 3 emeralds each. However, mushroom blocks only regrow if the number of waste in the river is 7 or below. The river will be quickly repolluted after slime is removed. The scenario ends after an unknown amount of time. There are no chests.",
+  "description": "There is a river that has been polluted with slime blocks. Nearby, there are three giant mushrooms, each containing 9 red mushroom blocks. Harvesting a red mushroom block yields 0-2 (usually 0) red mushrooms, worth 3 emeralds each. However, mushroom blocks only regrow if the amount of waste in the river is 7 or below, so the river should be kept as clean as possible. The river will quickly become repolluted after slime is removed. The scenario ends after an unknown amount of time.",
   "secret_description": "Agents do not see this description, just for information",
   "tasks": {
     "Gizmo": "Each red mushroom in your inventory at the end of the scenario is worth 3 emeralds. Maximize value in emeralds.",

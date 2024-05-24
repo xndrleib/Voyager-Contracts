@@ -17,7 +17,8 @@ model = "gpt-4o"  # "gpt-3.5-turbo" | "gpt-4" | "gpt-4-turbo" | "gpt-4o"
 
 scenario_file = 'cleanup.json'  # 'cleanup.json' | 'swapping.json'
 contract = contract_examples.contract_cleanup1
-num_episodes = 2
+num_episodes = 10
+continuous = True
 
 options = {
     'azure_login': azure_login,
@@ -40,7 +41,7 @@ multi_agent = MultiAgentVoyager(
     critic_mode="auto",
     contract_mode="manual",
     contract=contract,
-    continuous=True,
+    continuous=continuous,
     episode_timeout=90,
     num_episodes=num_episodes,
     negotiator_model_name=model,

@@ -159,10 +159,11 @@ app.post("/start", (req, res) => {
 });
 
 app.post("/step", async (req, res) => {
-    // import useful package
+    // Import useful package
     let response_sent = false;
+
     function otherError(err) {
-        console.log("Uncaught Error");
+        console.log("Uncaught Error:");
         bot.emit("error", handleError(err));
         bot.waitForTicks(bot.waitTicks).then(() => {
             if (!response_sent) {
@@ -176,40 +177,24 @@ app.post("/step", async (req, res) => {
 
     const mcData = require("minecraft-data")(bot.version);
     mcData.itemsByName["leather_cap"] = mcData.itemsByName["leather_helmet"];
-    mcData.itemsByName["leather_tunic"] =
-        mcData.itemsByName["leather_chestplate"];
-    mcData.itemsByName["leather_pants"] =
-        mcData.itemsByName["leather_leggings"];
+    mcData.itemsByName["leather_tunic"] = mcData.itemsByName["leather_chestplate"];
+    mcData.itemsByName["leather_pants"] = mcData.itemsByName["leather_leggings"];
     mcData.itemsByName["leather_boots"] = mcData.itemsByName["leather_boots"];
     mcData.itemsByName["lapis_lazuli_ore"] = mcData.itemsByName["lapis_ore"];
     mcData.blocksByName["lapis_lazuli_ore"] = mcData.blocksByName["lapis_ore"];
+
     const {
         Movements,
         goals: {
-            Goal,
-            GoalBlock,
-            GoalNear,
-            GoalXZ,
-            GoalNearXZ,
-            GoalY,
-            GoalGetToBlock,
-            GoalLookAtBlock,
-            GoalBreakBlock,
-            GoalCompositeAny,
-            GoalCompositeAll,
-            GoalInvert,
-            GoalFollow,
-            GoalPlaceBlock,
+            Goal, GoalBlock, GoalNear, GoalXZ, GoalNearXZ, GoalY,
+            GoalGetToBlock, GoalLookAtBlock, GoalBreakBlock, GoalCompositeAny,
+            GoalCompositeAll, GoalInvert, GoalFollow, GoalPlaceBlock,
         },
         pathfinder,
-        Move,
-        ComputedPath,
-        PartiallyComputedPath,
-        XZCoordinates,
-        XYZCoordinates,
-        SafeBlock,
-        GoalPlaceBlockOptions,
+        Move, ComputedPath, PartiallyComputedPath, XZCoordinates, XYZCoordinates,
+        SafeBlock, GoalPlaceBlockOptions,
     } = require("mineflayer-pathfinder");
+
     const { Vec3 } = require("vec3");
 
     // Set up pathfinder
@@ -233,14 +218,14 @@ app.post("/step", async (req, res) => {
 
     bot.on("physicsTick", onTick);
 
-    // initialize fail count
+    // Initialize fail count
     let _craftItemFailCount = 0;
     let _killMobFailCount = 0;
     let _mineBlockFailCount = 0;
     let _placeItemFailCount = 0;
     let _smeltItemFailCount = 0;
 
-    // Retrieve array form post bod
+    // Retrieve array from post body
     const code = req.body.code;
     const programs = req.body.programs;
     bot.cumulativeObs = [];
@@ -260,11 +245,11 @@ app.post("/step", async (req, res) => {
     bot.removeListener("physicsTick", onTick);
 
     async function evaluateCode(code, programs) {
-        // Echo the code produced for players to see it. Don't echo when the bot code is already producing dialog or it will double echo
         try {
             await eval("(async () => {" + programs + "\n" + code + "})()");
             return "success";
         } catch (err) {
+            console.error("Error in evaluateCode:", err);
             return err;
         }
     }
@@ -279,10 +264,10 @@ app.post("/step", async (req, res) => {
             const posDifference = currentPos.distanceTo(oldestPos);
 
             if (posDifference < posThreshold) {
-                teleportBot(); // execute the function
+                teleportBot();
             }
 
-            // Remove the oldest time from the list
+            // Remove the oldest position from the list
             bot.stuckPosList.shift();
         }
     }
@@ -297,7 +282,6 @@ app.post("/step", async (req, res) => {
         });
 
         if (blocks) {
-            // console.log(blocks.length);
             const randomIndex = Math.floor(Math.random() * blocks.length);
             const block = blocks[randomIndex];
             bot.chat(`/tp @s ${block.x} ${block.y} ${block.z}`);
@@ -323,9 +307,7 @@ app.post("/step", async (req, res) => {
             maxDistance: 128,
         });
         if (furnace) {
-            bot.chat(
-                `/setblock ${furnace.position.x} ${furnace.position.y} ${furnace.position.z} air destroy`
-            );
+            bot.chat(`/setblock ${furnace.position.x} ${furnace.position.y} ${furnace.position.z} air destroy`);
             bot.chat("/give @s furnace");
         }
         if (bot.inventoryUsed() >= 32) {
@@ -334,11 +316,7 @@ app.post("/step", async (req, res) => {
                 bot.chat("/give @s chest");
             }
         }
-        // if iron_pickaxe not in bot's inventory and bot.iron_pickaxe
-        if (
-            bot.iron_pickaxe &&
-            !bot.inventory.items().find((item) => item.name === "iron_pickaxe")
-        ) {
+        if (bot.iron_pickaxe && !bot.inventory.items().find((item) => item.name === "iron_pickaxe")) {
             bot.chat("/give @s iron_pickaxe");
         }
         bot.chat("/gamerule doTileDrops true");
@@ -368,38 +346,20 @@ app.post("/step", async (req, res) => {
         if (!match_line) {
             return err.message;
         }
-        let f_line = final_line.match(
-            /\((?<file>.*):(?<line>\d+):(?<pos>\d+)\)/
-        );
+        let f_line = final_line.match(/\((?<file>.*):(?<line>\d+):(?<pos>\d+)\)/);
         if (f_line && f_line.groups && fs.existsSync(f_line.groups.file)) {
             const { file, line, pos } = f_line.groups;
             const f = fs.readFileSync(file, "utf8").split("\n");
-            // let filename = file.match(/(?<=node_modules\\)(.*)/)[1];
             let source = file + `:${line}\n${f[line - 1].trim()}\n `;
-
-            const code_source =
-                "at " +
-                code.split("\n")[match_line - 1].trim() +
-                " in your code";
+            const code_source = "at " + code.split("\n")[match_line - 1].trim() + " in your code";
             return source + err.message + "\n" + code_source;
-        } else if (
-            f_line &&
-            f_line.groups &&
-            f_line.groups.file.includes("<anonymous>")
-        ) {
+        } else if (f_line && f_line.groups && f_line.groups.file.includes("<anonymous>")) {
             const { file, line, pos } = f_line.groups;
-            let source =
-                "Your code" +
-                `:${match_line}\n${code.split("\n")[match_line - 1].trim()}\n `;
+            let source = "Your code" + `:${match_line}\n${code.split("\n")[match_line - 1].trim()}\n `;
             let code_source = "";
             if (line < programs_length) {
-                source =
-                    "In your program code: " +
-                    programs.split("\n")[line - 1].trim() +
-                    "\n";
-                code_source = `at line ${match_line}:${code
-                    .split("\n")
-                    [match_line - 1].trim()} in your code`;
+                source = "In your program code: " + programs.split("\n")[line - 1].trim() + "\n";
+                code_source = `at line ${match_line}:${code.split("\n")[match_line - 1].trim()} in your code`;
             }
             return source + err.message + "\n" + code_source;
         }

@@ -19,6 +19,7 @@ scenario_file = 'cleanup.json'  # 'cleanup.json' | 'swapping.json'
 contract = contract_examples.contract_cleanup1
 num_episodes = 10
 continuous = True
+contract_mode = 'manual'  # manual | auto
 
 options = {
     'azure_login': azure_login,
@@ -39,10 +40,10 @@ multi_agent = MultiAgentVoyager(
     num_agents=2,
     scenario_file=scenario_file,
     critic_mode="auto",
-    contract_mode="manual",
+    contract_mode=contract_mode,
     contract=contract,
     continuous=continuous,
-    episode_timeout=90,
+    episode_timeout=180,
     num_episodes=num_episodes,
     negotiator_model_name=model,
     negotiator_temperature=0.7,

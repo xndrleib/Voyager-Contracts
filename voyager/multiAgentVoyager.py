@@ -824,6 +824,9 @@ class MultiAgentVoyager:
 
                 emeralds_data = {agent.username: results[agent.username]['info']['emeralds'] for agent in self.agents}
                 U.json_dump(emeralds_data, f"{episode_dir}/emeralds.json")
+                U.json_dump(self.negotiations_history[f'ep{self.episode}'], f"{episode_dir}/negotiations.json")
+                U.json_dump(self.events_history[f'ep{self.episode}'], f"{episode_dir}/chat_events.json")
+
 
             if self.continuous:
                 self.episode += 1

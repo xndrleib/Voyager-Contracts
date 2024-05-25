@@ -17,7 +17,7 @@ def json_loads(string, **kwargs):
 def json_dump(data, *file_path, **kwargs):
     file_path = f_join(file_path)
     with open(file_path, "w") as fp:
-        json.dump(data, fp, **kwargs)
+        json.dump(data, fp, indent=4, **kwargs)
 
 
 def json_dumps(data, **kwargs):

@@ -35,7 +35,6 @@ Code:
     4) Functions in the "Code from the last round" section will not be preserved for reuse in subsequent rounds. Do not reuse functions listed there.
     5) Anything defined outside a function will be ignored, define all your variables inside your functions.
     6) Call `bot.chat` to show intermediate progress. Announce useful and meaningful actions for other players to know (e.g. "Mining iron ore", "Retrieving pickaxe from chest", "Returning item to chest"). Limit the number of messages to prevent overwhelming the server.
-    7) Use `exploreUntil(bot, direction, maxDistance, callback)` when you cannot find something. You should frequently call this before mining blocks or killing mobs. You should select a direction at random every time instead of constantly using (1, 0, 1).
     8) `maxDistance` should always be 32 for `bot.findBlocks` and `bot.findBlock`. bot.findBlock doesn't return a position, you must use ".position" after to get the position.
     9) Do not write infinite loops (that rely on breaks to exit) or recursive functions.
     10) Do not use `bot.on` or `bot.once` to register event listeners. You definitely do not need them.
@@ -43,7 +42,7 @@ Code:
     12) Always use `mineBlock(bot, name, count)` with count > 1 when possible. `mineBlock(bot, name)` will only find and mine one (1) block with the given name. It can be useful to check if a block exists first with `bot.findBlock` before mining it. Mining multiple blocks (i.e. calling mineBlock(bot, 'iron', 10) at a time is usually faster than mining one multiple times (i.e. calling mineBlock(bot, 'iron', 1) 10 times)).
     13) bot.findBlocks will only find (1) block. To find multiple blocks, set count greater than 1. For the 'matching' parameter, be sure to use .id not the name of the block (e.g. matching: mcData.blocksByName.chest.id).
     14) Always respond with code even if last round was successful.
-    15) Never try to transfer emeralds--the judge will take care of that.
+    15) Never attempt to transfer emeralds yourself. All emeralds transactions specified in the contract are carried out by the judge.
 
 You have to only respond in the format as described below.
 RESPONSE FORMAT:

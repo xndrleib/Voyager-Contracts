@@ -15,3 +15,9 @@ bot.findBlock(options); // Return the nearest block (not position) matching the 
 await bot.equip(item, destination); // Equip the item in the specified destination. `item` is `Item`, `destination` can only be "hand", "head", "torso", "legs", "feet", "off-hand"
 await bot.activateBlock(block); // This is the same as right-clicking a block in the game. Useful for buttons, doors, etc. You must get to the block first
 await bot.lookAt(position); // Look at the specified position. You must go near the position before you look at it. To fill bucket with water, you must lookAt first. `position` is `Vec3`
+
+// node-minecraft-data is loaded as mcData. You can use it to get information about items and block in Minecraft
+redMushroomBlock = mcData.blocksByName['red_mushroom_block']; // Object containing information about "Red Mushroom Block"
+redMushroomBlockID = redMushroomBlock.id; // ID of "Red Mushroom Block"
+wheatItem = mcData.itemsByName['wheat']; // Object containing information about "Wheat" item
+wheatItemID = wheatItem.id; // ID of "Wheat" item

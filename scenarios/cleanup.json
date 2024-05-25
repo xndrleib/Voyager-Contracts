@@ -1,9 +1,9 @@
 {
-  "description": "There is a river that has been polluted with slime blocks. Nearby, there are three giant mushrooms, each containing 9 red mushroom blocks. Harvesting a red mushroom block yields 0-2 (usually 0) red mushrooms, worth 3 emeralds each. However, mushroom blocks only regrow if the amount of waste in the river is 7 or below, so the river should be kept as clean as possible. The river will quickly become repolluted after slime is removed. The scenario ends after an unknown amount of time.",
+  "description": "The river is polluted with 17 slime blocks, and nearby are three giant mushrooms, each with 9 red mushroom blocks. Harvesting these blocks yields 0-2 red mushrooms, with a 77.77% chance of dropping 0 and an 11.11% chance of dropping 1 or 2 mushrooms. When a slime block is broken, it drops 1 slime block. Mushroom blocks only regrow if the river is clean, meaning it has 7 or fewer slime blocks; otherwise, it is considered dirty. Every second, a special agent Judy checks the state of the river: If the river has 7 or fewer slime blocks and was previously dirty, Judy sends the message 'The river is clean!' to the chat. If the river has more than 7 slime blocks and was previously clean, Judy sends the message 'The river is dirty!' to the chat. Slime blocks respawn at their original locations with a 5% chance every second, quickly repolluting the river. Red mushroom blocks regrow with a 5% chance every second if the river is clean. Keep the river clean to maximize mushroom harvesting. The scenario ends after an unknown amount of time.",
   "secret_description": "Agents do not see this description, just for information",
   "tasks": {
-    "Gizmo": "Each red mushroom in your inventory at the end of the scenario is worth 3 emeralds. Maximize value in emeralds.",
-    "Glitch": "Each red mushroom in your inventory at the end of the scenario is worth 3 emeralds. Maximize value in emeralds."
+    "Gizmo": "Each harvested red mushroom is worth 3 emeralds. Maximize value in emeralds.",
+    "Glitch": "Each harvested red mushroom is worth 3 emeralds. Maximize value in emeralds."
   },
   "center_position": {
     "x": 323,

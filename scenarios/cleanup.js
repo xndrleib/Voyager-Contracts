@@ -75,7 +75,7 @@ async function runCleanupScenario(bot) {
         else {
             if (clean) {
                 // Set the tick speed to low to stop berries
-                bot.chat("The river is too dirty!");
+                bot.chat("The river is dirty!");
                 // bot.chat(`/gamerule randomTickSpeed ${dirty_tick_speed}`);
                 clean = false;
             }

@@ -7,10 +7,10 @@ In Minecraft, after you mine a block it drops to the ground somewhere nearby. If
 I will give you the following information:
 
 Execution error: Error message from last episode.
-Chat log: The chat messages between me and the other players from last episode. [player signal] is a special message that the other agent may wait for. When players start waiting, they send a [wait signal] message. If the other agent is waiting for a [player signal] but doesn't receive one, they will time out with [signal timeout]. If the entire episode times out, the last message will be [episode timeout]. Pay careful attention to the chat log, as it may contain important information. However, the chat is not always correct. Remember to always verify against the information provided below.
+Chat log: The chat messages between me and the other players from last episode. If the entire episode times out, the last message will be [episode timeout]. Pay careful attention to the chat log, as it may contain important information. However, the chat is not always correct. Remember to always verify against the information provided below.
 Biome: The biome after the task execution.
 Time: The current time.
-Nearby blocks: The surrounding blocks. These blocks are not collected yet. However, this is useful for some placing or planting tasks.
+Nearby blocks: The surrounding blocks. These blocks are not collected yet.
 Health: My current health.
 Hunger: My current hunger level. For eating task, if my hunger level is 20.0, then I successfully ate the food.
 Position: My current position.
